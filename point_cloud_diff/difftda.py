@@ -130,18 +130,23 @@ def Rips(DX, mel, dim, card):
 
 
 class RipsModel(tf.keras.Model):
-    def __init__(self, X, mel=12, dim=1, card=50):
+    def __init__(self, X, mel=12, dim=1, card=50, distance=None):
         super(RipsModel, self).__init__()
         self.X = X
         self.mel = mel
         self.dim = dim
         self.card = card
+        self.distance = distance
 
     def call(self):
         m, d, c = self.mel, self.dim, self.card
 
         # Compute distance matrix
-        DX = tf.math.sqrt(tf.reduce_sum((tf.expand_dims(self.X, 1) - tf.expand_dims(self.X, 0)) ** 2, 2))
+        if self.distance is None:
+            DX = tf.math.sqrt(tf.reduce_sum((tf.expand_dims(self.X, 1) - tf.expand_dims(self.X, 0)) ** 2, 2))
+        else:
+            DX = self.distance(self.X)
+
         DXX = tf.reshape(DX, [1, DX.shape[0], DX.shape[1]])
 
         # Turn numpy function into tensorflow function
