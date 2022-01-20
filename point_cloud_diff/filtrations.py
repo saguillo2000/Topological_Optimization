@@ -131,7 +131,7 @@ def Rips(DX, mel, dim, card):
 
 
 class RipsModel(tf.keras.Model):
-    def __init__(self, X, mel=12, dim=1, card=50, distance: Callable[[np.array], tf.Tensor] = None):
+    def __init__(self, X, mel=12, dim=1, card=50, distance: Callable[[tf.Tensor], tf.Tensor] = None):
         super(RipsModel, self).__init__()
         self.X = X
         self.mel = mel

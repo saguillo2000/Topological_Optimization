@@ -2,8 +2,8 @@ import numpy as np
 import tensorflow as tf
 
 
-def distance_corr(X: np.array) -> tf.Tensor:
-    correlation = np.corrcoef(X)
+def distance_corr(X: tf.Tensor) -> tf.Tensor:
+    correlation = np.corrcoef(X.numpy())
     np.nan_to_num(correlation, copy=False)
     return tf.convert_to_tensor(correlation, np.float64)
 
