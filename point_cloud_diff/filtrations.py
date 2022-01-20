@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import gudhi as gd
+from collections.abc import Callable
 
 
 # In this file, we write functions based on the Gudhi library that compute persistence diagrams associated to
@@ -130,7 +131,7 @@ def Rips(DX, mel, dim, card):
 
 
 class RipsModel(tf.keras.Model):
-    def __init__(self, X, mel=12, dim=1, card=50, distance=None):
+    def __init__(self, X, mel=12, dim=1, card=50, distance: Callable[[np.array], tf.Tensor] = None):
         super(RipsModel, self).__init__()
         self.X = X
         self.mel = mel
