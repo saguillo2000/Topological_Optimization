@@ -3,7 +3,7 @@ from gudhi.wasserstein import wasserstein_distance
 from point_cloud_diff.filtrations import *
 
 
-def diff_point_cloud(X, num_epochs, lr):
+def diff_point_cloud(X, num_epochs, lr, dim):
 
     XTF = tf.Variable(X, tf.float32)
 
