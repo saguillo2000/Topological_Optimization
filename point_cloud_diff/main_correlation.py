@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from distance_strategies import correlation_strategy
 from filtrations import *
 from diff import diff_point_cloud
-from distance_strategies.correlation_strategy import distance_corr, distance_corr_ruben
+from distance_strategies.correlation_strategy import *
 
 # TODO
 """
@@ -42,7 +42,7 @@ def prove_euclidean_distance():
 
     X = tf.Variable(X, tf.float32)
 
-    losses, _, X_opt, grads = diff_point_cloud(X=X, num_epochs=1, lr=lr, dim=0)
+    losses, _, X_opt, grads = diff_point_cloud(X=X, num_epochs=1, lr=lr, dim=0, distance=euclidean_distance)
 
     print(X_opt)
 
@@ -51,11 +51,13 @@ def prove_euclidean_distance():
 
 def prove_correlation():
     X = np.array([[0.1, 0.], [1.5, 1.5], [0., 1.6]])
+    # X = np.random.rand(6000, 50)
+    print(X)
     lr = 1
 
     X = tf.Variable(X, tf.float32)
 
-    losses, _, X_opt, grads = diff_point_cloud(X=X, num_epochs=1, lr=lr, dim=0, distance=distance_corr_ruben)
+    losses, _, X_opt, grads = diff_point_cloud(X=X, num_epochs=1, lr=lr, dim=0, distance=distance_corr_tf)
 
     print(X_opt)
 
