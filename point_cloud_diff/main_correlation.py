@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from distance_strategies import correlation_strategy
 from filtrations import *
 from diff import diff_point_cloud
-from distance_strategies.correlation_strategy import distance_corr
+from distance_strategies.correlation_strategy import distance_corr, distance_corr_ruben
 
 # TODO
 """
@@ -55,7 +55,7 @@ def prove_correlation():
 
     X = tf.Variable(X, tf.float32)
 
-    losses, _, X_opt, grads = diff_point_cloud(X=X, num_epochs=1, lr=lr, dim=0, distance=distance_corr)
+    losses, _, X_opt, grads = diff_point_cloud(X=X, num_epochs=1, lr=lr, dim=0, distance=distance_corr_ruben)
 
     print(X_opt)
 
