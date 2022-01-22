@@ -50,7 +50,7 @@ def prove_euclidean_distance():
 
 
 def prove_correlation():
-    X = np.array([[0.1, 0.], [1.5, 1.5], [0., 1.6]])
+    X = np.array([[10., 0.], [1.5, 1.5], [-10., 1.6]])
     # X = np.random.rand(6000, 50)
     print(X)
     lr = 1
