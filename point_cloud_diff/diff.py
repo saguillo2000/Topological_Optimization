@@ -3,6 +3,19 @@ from gudhi.wasserstein import wasserstein_distance
 from filtrations import *
 
 
+def diff_point(X, dim, distance, optimizer):
+    with tf.GradientTape() as tape:
+        Dg = RipsModel(X=X, mel=10, dim=dim, card=10, distance=distance).call()
+        loss = wasserstein_distance(Dg, tf.constant(np.empty([0, 2])), order=1, enable_autodiff=True)
+        # loss = compute_total_persistence(Dg)
+
+    gradients = tape.gradient(loss, [X])
+
+    optimizer.apply_gradients(zip(gradients, [X]))
+
+    return Dg, X, gradients, loss, optimizer
+
+
 def diff_point_cloud(X, num_epochs, lr, dim, distance: Callable[[np.array], tf.Tensor] = None):
     # XTF = tf.Variable(X, tf.float32)
 
@@ -21,11 +34,9 @@ def diff_point_cloud(X, num_epochs, lr, dim, distance: Callable[[np.array], tf.T
         losses.append(loss.numpy())
 
         print(compute_total_persistence(Dg.numpy()))
-        print(loss)
 
         gradients = tape.gradient(loss, [X])
 
-        print(gradients)
         grads.append(gradients[0].numpy())
         optimizer.apply_gradients(zip(gradients, [X]))
 
@@ -33,14 +44,10 @@ def diff_point_cloud(X, num_epochs, lr, dim, distance: Callable[[np.array], tf.T
 
 
 def compute_total_persistence(dgm):
-
     '''
 
     :param dgm:
     :return:
     '''
 
-    return - tf.math.reduce_sum(tf.math.subtract(dgm[:, 0], dgm[:, 1]))
-
-
-
+    return tf.math.reduce_sum(tf.math.subtract(dgm[:, 1], dgm[:, 0]))
