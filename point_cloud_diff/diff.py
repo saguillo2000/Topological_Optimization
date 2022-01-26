@@ -14,12 +14,13 @@ def diff_point_cloud(X, num_epochs, lr, dim, distance: Callable[[np.array], tf.T
         with tf.GradientTape() as tape:
             Dg = RipsModel(X=X, mel=10, dim=dim, card=10, distance=distance).call()
             loss = wasserstein_distance(Dg, tf.constant(np.empty([0, 2])), order=1, enable_autodiff=True)
+            # loss = compute_total_persistence(Dg)
 
         Dgs.append(Dg.numpy())
         Xs.append(X.numpy())
         losses.append(loss.numpy())
 
-        print(compute_average_birth_death(Dg.numpy()))
+        print(compute_total_persistence(Dg.numpy()))
         print(loss)
 
         gradients = tape.gradient(loss, [X])
@@ -31,10 +32,15 @@ def diff_point_cloud(X, num_epochs, lr, dim, distance: Callable[[np.array], tf.T
     return losses, Dgs, Xs, grads
 
 
-def compute_average_birth_death(dgm):
-    total = 0
-    for feature in dgm:
-        birth, death = feature[0], feature[1]
-        total += death - birth
+def compute_total_persistence(dgm):
 
-    return total
+    '''
+
+    :param dgm:
+    :return:
+    '''
+
+    return - tf.math.reduce_sum(tf.math.subtract(dgm[:, 0], dgm[:, 1]))
+
+
+

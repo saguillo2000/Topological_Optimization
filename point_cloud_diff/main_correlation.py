@@ -42,7 +42,7 @@ def prove_euclidean_distance():
 
     X = tf.Variable(X, tf.float32)
 
-    losses, _, X_opt, grads = diff_point_cloud(X=X, num_epochs=1, lr=lr, dim=0, distance=euclidean_distance)
+    losses, _, X_opt, grads = diff_point_cloud(X=X, num_epochs=1, lr=lr, dim=0)
 
     print(X_opt)
 
@@ -50,7 +50,7 @@ def prove_euclidean_distance():
 
 
 def prove_correlation():
-    X = np.array([[10., 0.], [1.5, 1.5], [-10., 1.6]])
+    X = np.array([[10., 20.], [7.5, 1.5], [-10., 100.6]])
     # X = np.random.rand(6000, 50)
     print(X)
     lr = 1
@@ -66,5 +66,5 @@ def prove_correlation():
 
 if __name__ == '__main__':
     # execute only if run as the entry point into the program
-    prove_correlation()
-    # prove_euclidean_distance()
+    # prove_correlation()
+    prove_euclidean_distance()
