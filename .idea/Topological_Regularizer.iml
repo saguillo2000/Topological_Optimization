@@ -4,6 +4,7 @@
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/point_cloud_diff" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/generator_NN" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.9 (prototype_TDA)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
