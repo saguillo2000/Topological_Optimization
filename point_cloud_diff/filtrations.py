@@ -148,11 +148,6 @@ class RipsModel(tf.keras.Model):
         else:
             DX = self.distance(self.X)
 
-        print('Distance Matrix \n')
-        print(DX)
-        print('Tipo de DX', type(DX))
-        print('Forma de DX', DX.shape)
-
         DXX = tf.reshape(DX, [1, DX.shape[0], DX.shape[1]])
 
         # Turn numpy function into tensorflow function
