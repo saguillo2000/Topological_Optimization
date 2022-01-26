@@ -1,11 +1,8 @@
 from matplotlib import pyplot as plt
 
-from distance_strategies import correlation_strategy
-from filtrations import *
-from diff import diff_point_cloud, diff_point_cloud_test
 from distance_strategies.correlation_strategy import *
+from point_cloud_diff_tests import diff_point_cloud_test
 
-# TODO
 """
 Steps:
     - En otro proyecto creas redes neuronales aleatorias (Hecho en mi repo, puedes copiar/pegar)
