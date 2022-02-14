@@ -4,13 +4,13 @@ import tensorflow as tf
 import numpy as np
 import os
 
-from constraints import EPOCH_ITERATIONS_TO_INCREMENT_ITERATION_BATCHES
 from model import NeuronSpace
 from model.NeuronClusteringStrategies import AverageImportanceStrategy
 
 from tensorflow.keras.layers import Conv2D, MaxPool2D, Flatten, Dense
 
 from ToyNeuralNetworks.datasets.CIFAR10.dataset import get_dataset
+from ToyNeuralNetworks.networks.MLP.mlp_generation import generate_networks
 
 
 def fibonacci(initial_a=1, initial_b=1):
@@ -53,6 +53,9 @@ def group_label(inputs, labels):
 if __name__ == '__main__':
     train_dataset, val_dataset, test_dataset = get_dataset()
 
+    model = generate_networks(1, (32, 32, 3), 8, 10, 4000)[0]
+    print(model.summary())
+    '''
     model = tf.keras.Sequential([
         Conv2D(filters=32, kernel_size=(3, 3), input_shape=(224, 224, 3), activation='relu'),
         Conv2D(filters=32, kernel_size=(3, 3), activation='relu'),
@@ -68,6 +71,7 @@ if __name__ == '__main__':
         Dense(units=128, activation='relu'),
         Dense(units=10, activation='softmax')  # CIFAR 10
     ])
+    '''
 
     batches_incrementation_strategy = partial(fibonacci, initial_a=34, initial_b=55)
     clustering_strategy = partial(AverageImportanceStrategy.average_importance_clustering, number_of_neurons=3000)
@@ -78,9 +82,10 @@ if __name__ == '__main__':
 
     for epoch in range(epochs):
 
-        number_of_batches = next(batches_incrementation_strategy)
-        number_of_batches = min(len(train_dataset), number_of_batches)
-        assert number_of_batches <= len(train_dataset)
+        # number_of_batches = next(batches_incrementation_strategy)
+        # number_of_batches = min(len(train_dataset), number_of_batches)
+        # assert number_of_batches <= len(train_dataset)
+        number_of_batches = 1
         train_batches = batches_generator(number_of_batches)
 
         batches, changed_epoch = next(train_batches)
@@ -92,6 +97,7 @@ if __name__ == '__main__':
                 tf_label = tf.ones(len(data_group)) * int(label)
                 tf_data = tf.convert_to_tensor(data_group)
                 X = neuron_space_strategy(model, tf_data)
+                print('Neuron Space')
                 print(X)
 
     print('Finished')
