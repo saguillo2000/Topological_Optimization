@@ -4,10 +4,12 @@ import tensorflow as tf
 import numpy as np
 import os
 
+from gudhi.wasserstein import wasserstein_distance
+
+from filtrations import RipsModel
 from model import NeuronSpace
 from model.NeuronClusteringStrategies import AverageImportanceStrategy
-
-from tensorflow.keras.layers import Conv2D, MaxPool2D, Flatten, Dense
+from tensorflow.keras import losses
 
 from ToyNeuralNetworks.datasets.CIFAR10.dataset import get_dataset
 from ToyNeuralNetworks.networks.MLP.mlp_generation import generate_networks
@@ -50,10 +52,18 @@ def group_label(inputs, labels):
     return groups
 
 
+@tf.function
+def _compute_predictions(inputs, model):
+    return model(inputs)
+
+
 if __name__ == '__main__':
+    topo_reg = 0.3
     train_dataset, val_dataset, test_dataset = get_dataset()
 
+    loss_object = losses.SparseCategoricalCrossentropy(from_logits=True)
     model = generate_networks(1, (32, 32, 3), 8, 10, 4000)[0]
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
     print(model.summary())
     '''
     model = tf.keras.Sequential([
@@ -77,7 +87,7 @@ if __name__ == '__main__':
     clustering_strategy = partial(AverageImportanceStrategy.average_importance_clustering, number_of_neurons=3000)
     neuron_space_strategy = partial(NeuronSpace.get_neuron_activation_space_with_clustering,
                                     neuron_clustering_strategy=clustering_strategy)
-    epochs = 1
+    epochs = 50
     batches_incrementation_strategy = fibonacci(initial_a=34, initial_b=55)
 
     for epoch in range(epochs):
@@ -95,9 +105,23 @@ if __name__ == '__main__':
 
             for label, data_group in grouped_inputs.items():
                 tf_label = tf.ones(len(data_group)) * int(label)
+                # dim_label = tf.shape(tf_label).numpy()[0]
+                # tf_label = tf.reshape(tf_label, [1, dim_label])
+
                 tf_data = tf.convert_to_tensor(data_group)
                 X = neuron_space_strategy(model, tf_data)
-                print('Neuron Space')
-                print(X)
 
+                X = tf.Variable(X.array, tf.float64)
+
+                with tf.GradientTape() as tape:
+                    Dg = RipsModel(X=X, mel=10, dim=0, card=10).call()
+                    topo_loss = wasserstein_distance(Dg, tf.constant(np.empty([0, 2])), order=1, enable_autodiff=True)
+                    predictions_point = _compute_predictions(inputs, model)
+                    single_loss = loss_object(labels, predictions_point)
+                    loss = topo_reg * topo_loss + (1 - topo_reg)*single_loss
+                    print('Loss of label, ',tf_label, ' is :', loss)
+
+                gradients = tape.gradient(loss, model.trainable_variables)
+                optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+                print('------------------------------------')
     print('Finished')
