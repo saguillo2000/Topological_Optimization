@@ -65,23 +65,6 @@ if __name__ == '__main__':
     model = generate_networks(1, (32, 32, 3), 8, 10, 4000)[0]
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
     print(model.summary())
-    '''
-    model = tf.keras.Sequential([
-        Conv2D(filters=32, kernel_size=(3, 3), input_shape=(224, 224, 3), activation='relu'),
-        Conv2D(filters=32, kernel_size=(3, 3), activation='relu'),
-        MaxPool2D(pool_size=(2, 2), padding='same'),
-
-        Conv2D(filters=64, kernel_size=(3, 3), activation='relu'),
-        Conv2D(filters=64, kernel_size=(3, 3), activation='relu'),
-        MaxPool2D(pool_size=(2, 2), padding='same'),
-
-        Flatten(),
-        Dense(units=256, activation='relu'),
-        Dense(units=512, activation='relu'),
-        Dense(units=128, activation='relu'),
-        Dense(units=10, activation='softmax')  # CIFAR 10
-    ])
-    '''
 
     batches_incrementation_strategy = partial(fibonacci, initial_a=34, initial_b=55)
     clustering_strategy = partial(AverageImportanceStrategy.average_importance_clustering, number_of_neurons=3000)

@@ -61,7 +61,33 @@ def prove_correlation():
     plot_point_movement(X_opt, lr, grads)
 
 
+def prove_homologies(num_epochs=10):
+    X = np.array([[0.1, 0.], [1.5, 1.5], [0., 1.6]])
+    lr = 1
+
+    X = tf.Variable(X, tf.float32)
+
+    losses, _, X_opt, grads = diff_point_cloud_test(X=X, num_epochs=num_epochs, lr=lr, dim=0)
+
+    print(X_opt)
+
+    plot_point_movement(X_opt, lr, grads)
+
+    losses, _, X_opt, grads = diff_point_cloud_test(X=X, num_epochs=num_epochs, lr=lr, dim=1)
+
+    print(X_opt)
+
+    plot_point_movement(X_opt, lr, grads)
+
+    losses, _, X_opt, grads = diff_point_cloud_test(X=X, num_epochs=num_epochs, lr=lr, dim=2)
+
+    print(X_opt)
+
+    plot_point_movement(X_opt, lr, grads)
+
+
 if __name__ == '__main__':
     # execute only if run as the entry point into the program
     # prove_correlation()
-    prove_euclidean_distance()
+    # prove_euclidean_distance()
+    prove_homologies()

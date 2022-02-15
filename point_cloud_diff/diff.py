@@ -15,10 +15,10 @@ def diff_point_cloud(X, dim, distance):
 
 
 def compute_total_persistence(dgm):
-    '''
-
-    :param dgm:
-    :return:
-    '''
+    """
+    Computes the average of death - birth of features extracted by the persistence diagram
+    :param dgm: persistence diagram of point (death, birth)
+    :return: float of average
+    """
 
     return tf.math.reduce_sum(tf.math.subtract(dgm[:, 1], dgm[:, 0]))
