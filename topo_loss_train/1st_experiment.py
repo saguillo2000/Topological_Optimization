@@ -14,6 +14,8 @@ from tensorflow.keras import losses
 from ToyNeuralNetworks.datasets.CIFAR10.dataset import get_dataset
 from ToyNeuralNetworks.networks.MLP.mlp_generation import generate_networks
 
+import pickle
+
 
 def fibonacci(initial_a=1, initial_b=1):
     a, b = initial_a, initial_b
@@ -70,14 +72,20 @@ if __name__ == '__main__':
     clustering_strategy = partial(AverageImportanceStrategy.average_importance_clustering, number_of_neurons=3000)
     neuron_space_strategy = partial(NeuronSpace.get_neuron_activation_space_with_clustering,
                                     neuron_clustering_strategy=clustering_strategy)
-    epochs = 50
+    epochs = 1
     batches_incrementation_strategy = fibonacci(initial_a=34, initial_b=55)
+
+    losses_epochs = []
+    topo_losses_epochs = []
 
     for epoch in range(epochs):
 
-        # number_of_batches = next(batches_incrementation_strategy)
-        # number_of_batches = min(len(train_dataset), number_of_batches)
-        # assert number_of_batches <= len(train_dataset)
+        losses_batches = []
+        topo_losses_batches = []
+
+        number_of_batches = next(batches_incrementation_strategy)
+        number_of_batches = min(len(train_dataset), number_of_batches)
+        assert number_of_batches <= len(train_dataset)
         number_of_batches = 1
         train_batches = batches_generator(number_of_batches)
 
@@ -86,6 +94,7 @@ if __name__ == '__main__':
         for inputs, labels in batches:
             grouped_inputs = group_label(inputs, labels)
 
+            total_loss = 0
             for label, data_group in grouped_inputs.items():
                 tf_label = tf.ones(len(data_group)) * int(label)
                 # dim_label = tf.shape(tf_label).numpy()[0]
@@ -101,10 +110,32 @@ if __name__ == '__main__':
                     topo_loss = wasserstein_distance(Dg, tf.constant(np.empty([0, 2])), order=1, enable_autodiff=True)
                     predictions_point = _compute_predictions(inputs, model)
                     single_loss = loss_object(labels, predictions_point)
-                    loss = topo_reg * topo_loss + (1 - topo_reg)*single_loss
-                    print('Loss of label, ',tf_label, ' is :', loss)
+                    loss = topo_reg * topo_loss + (1 - topo_reg) * single_loss
 
+                total_loss += loss
                 gradients = tape.gradient(loss, model.trainable_variables)
                 optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-                print('------------------------------------')
+
+            loss_batch = loss_object(labels, _compute_predictions(inputs, model)).numpy()
+            topo_loss_ = (total_loss / 10).numpy()
+            print('------------------------------------')
+            print('Topo Loss of batch is :', topo_loss_)
+            print('Loss Batch is: ', loss_batch)
+            print('------------------------------------')
+            topo_losses_batches.append(topo_loss_)  # 10 labels
+            losses_batches.append(loss_batch)
+
+        topo_losses_epochs.append(topo_losses_batches)
+        losses_epochs.append(losses_batches)
+
+    print('Losses epochs: ', losses_epochs)
+    outputFile = open('losses_epochs.pkl', 'wb')
+    pickle.dump(losses_epochs, outputFile)
+    outputFile.close()
+
+    print('Topological losses epochs: ', topo_losses_epochs)
+    outputFile = open('topo_losses_epochs.pkl', 'wb')
+    pickle.dump(topo_losses_epochs, outputFile)
+    outputFile.close()
+
     print('Finished')
