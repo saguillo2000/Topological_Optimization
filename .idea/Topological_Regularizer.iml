@@ -8,7 +8,7 @@
       <sourceFolder url="file://$MODULE_DIR$/generator_NN" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/topo_loss_train" isTestSource="false" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.9 (prototype_TDA)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="3.9 @ Ubuntu-20.04" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
