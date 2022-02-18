@@ -1,7 +1,49 @@
 import pickle
+import matplotlib.pyplot as plt
+import plotly.express as px
+
+
+def open_pickle(path):
+    with open(path, 'rb') as f:
+        return pickle.load(f)
+
+
+def flat_list(losses):
+    return [item for sublist in losses for item in sublist]
+
 
 if __name__ == '__main__':
-    with open('losses_epochs.pkl', 'rb') as f:
-        losses = pickle.load(f)
+    none_topo_losses = open_pickle('losses_epochs.pkl')
+    topo_losses = open_pickle('topo_losses_epochs.pkl')
+    validations = open_pickle('validations_epochs.pkl')
 
-    print(losses)
+    validations_topo = []
+    validations_none_topo = []
+    for index, tuple_ in enumerate(validations):
+        val_none_topo = tuple_[0]
+        val_topo = tuple_[1]
+
+        validations_topo.append(val_topo)
+        validations_none_topo.append(val_none_topo)
+
+        print('-------------------')
+        print('In epoch: ', index)
+        print('-------------------')
+        print('Topological losses: ',val_topo)
+        print('None topological losses: ',val_none_topo)
+
+    flat_topo_losses = flat_list(topo_losses)
+    flat_none_topo_losses = flat_list(none_topo_losses)
+    flat_val_topo = flat_list(validations_topo)
+    flat_val_none_topo = flat_list(validations_none_topo)
+
+    # Create count of the number of epochs
+    epoch_count = range(1, len(flat_topo_losses) + 1)
+
+    # Visualize loss history
+    plt.plot(epoch_count, flat_topo_losses, 'r--')
+    plt.plot(epoch_count, flat_none_topo_losses, 'b--')
+    plt.legend(['Topo Losses', 'None Topo Loss'])
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.show()
