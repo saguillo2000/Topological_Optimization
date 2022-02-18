@@ -85,14 +85,19 @@ if __name__ == '__main__':
     validation_losses = []
 
     for epoch in range(epochs):
+        print('--------------------------------------')
+        print('--------------------------------------')
+        print('Epoch number:', epoch)
+        print('--------------------------------------')
+        print('--------------------------------------')
 
         losses_batches = []
         topo_losses_batches = []
 
-        number_of_batches = next(batches_incrementation_strategy)
-        number_of_batches = min(len(train_dataset), number_of_batches)
-        assert number_of_batches <= len(train_dataset)
-        # number_of_batches = 1
+        # number_of_batches = next(batches_incrementation_strategy)
+        # number_of_batches = min(len(train_dataset), number_of_batches)
+        # assert number_of_batches <= len(train_dataset)
+        number_of_batches = 20
         train_batches = batches_generator(number_of_batches)
 
         batches, changed_epoch = next(train_batches)
@@ -107,15 +112,18 @@ if __name__ == '__main__':
                 topo_loss = wasserstein_distance(Dg, tf.constant(np.empty([0, 2])), order=1, enable_autodiff=True)
 
                 predictions_topo_reg = _compute_predictions(inputs, model_topo_reg)
-                predictions_none_topo_reg = _compute_predictions(inputs, model_none_topo_reg)
 
                 single_loss_topo_reg = loss_object(labels, predictions_topo_reg)
-                loss_none_topo_reg = loss_object(labels, predictions_none_topo_reg)
 
                 loss_topo_reg = -(topo_reg * topo_loss) + (1 - topo_reg) * single_loss_topo_reg
 
             gradients_topo = tape.gradient(loss_topo_reg, model_topo_reg.trainable_variables)
             optimizer.apply_gradients(zip(gradients_topo, model_topo_reg.trainable_variables))
+
+            with tf.GradientTape() as tape:
+                predictions = _compute_predictions(inputs, model_none_topo_reg)
+
+                loss_none_topo_reg = loss_object(labels, predictions)
 
             gradients = tape.gradient(loss_none_topo_reg, model_none_topo_reg.trainable_variables)
             optimizer.apply_gradients(zip(gradients, model_none_topo_reg.trainable_variables))
@@ -130,13 +138,19 @@ if __name__ == '__main__':
             losses_batches.append(loss_batch)
 
         # TODO Validation for none and with TopoReg
-        val_losses_epoch = []
-        for validation_inputs, validation_labels in val_dataset:
-            val_loss = loss_object(validation_labels,
-                                   _compute_predictions(validation_inputs, model_topo_reg)).numpy()
-            val_losses_epoch.append(val_loss)
+        val_losses_epoch_none_topo = []
+        val_losses_epoch_topo = []
 
-        validation_losses.append(val_losses_epoch)
+        for validation_inputs, validation_labels in val_dataset:
+            val_loss_topo = loss_object(validation_labels,
+                                        _compute_predictions(validation_inputs, model_topo_reg)).numpy()
+            val_loss_none_topo = loss_object(validation_labels,
+                                             _compute_predictions(validation_inputs, model_none_topo_reg)).numpy()
+
+            val_losses_epoch_none_topo.append(val_loss_none_topo)
+            val_losses_epoch_topo.append(val_loss_topo)
+
+        validation_losses.append((val_losses_epoch_none_topo, val_losses_epoch_topo))
         topo_losses_epochs.append(topo_losses_batches)
         losses_epochs.append(losses_batches)
 
@@ -148,6 +162,11 @@ if __name__ == '__main__':
     print('Topological losses epochs: ', topo_losses_epochs)
     outputFile = open('topo_losses_epochs.pkl', 'wb')
     pickle.dump(topo_losses_epochs, outputFile)
+    outputFile.close()
+
+    print('Validations epochs: ', validation_losses)
+    outputFile = open('validations_epochs.pkl', 'wb')
+    pickle.dump(validation_losses, outputFile)
     outputFile.close()
 
     print('Finished')
