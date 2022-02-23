@@ -66,8 +66,18 @@ if __name__ == '__main__':
     topo_reg = 0.3
     train_dataset, val_dataset, test_dataset = get_dataset()
 
+    # Functions for training and pick model
+
+    accuracy_model = tf.metrics.SparseCategoricalAccuracy()
     loss_object = losses.SparseCategoricalCrossentropy(from_logits=True)
-    model_topo_reg = generate_networks(1, (32, 32, 3), 8, 10, 4000)[0]
+    # generate_networks(1, (32, 32, 3), 8, 10, 4000)[0]
+    model_topo_reg = tf.keras.models.Sequential([
+        tf.keras.layers.Flatten(input_shape=[32, 32, 3]),
+        tf.keras.layers.Dense(100, activation="relu"),
+        tf.keras.layers.Dense(100, activation="relu"),
+        tf.keras.layers.Dense(100, activation="relu"),
+        tf.keras.layers.Dense(10, activation="softmax")
+    ])
     model_none_topo_reg = clone_model(model_topo_reg)
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
     print('MODEL ARCHITECTURE FOR TOPO REG AND NONE TOPO REG: ')
@@ -77,12 +87,15 @@ if __name__ == '__main__':
     clustering_strategy = partial(AverageImportanceStrategy.average_importance_clustering, number_of_neurons=3000)
     neuron_space_strategy = partial(NeuronSpace.get_neuron_activation_space_with_clustering,
                                     neuron_clustering_strategy=clustering_strategy)
-    epochs = 50
+    epochs = 20
     batches_incrementation_strategy = fibonacci(initial_a=34, initial_b=55)
 
     losses_epochs = []
     topo_losses_epochs = []
+    topo_accuracies_epochs = []
+    accuracies_epochs = []
     validation_losses = []
+    validation_accuracies = []
 
     for epoch in range(epochs):
         print('--------------------------------------')
@@ -93,6 +106,9 @@ if __name__ == '__main__':
 
         losses_batches = []
         topo_losses_batches = []
+
+        accuracy_batches = []
+        accuracy_topo_batches= []
 
         # number_of_batches = next(batches_incrementation_strategy)
         # number_of_batches = min(len(train_dataset), number_of_batches)
@@ -130,29 +146,51 @@ if __name__ == '__main__':
 
             loss_batch = loss_none_topo_reg.numpy()
             topo_loss_ = loss_topo_reg.numpy()
+
+            accuracy_batch = accuracy_model(labels, predictions).numpy()
+            accuracy_topo = accuracy_model(labels, predictions_topo_reg).numpy()
+
             print('------------------------------------')
             print('Loss with Topo Reg :', topo_loss_)
             print('Loss without Topo Reg: ', loss_batch)
+            print('Accuracy with Topo Reg :', accuracy_topo)
+            print('Accuracy without Topo Reg: ', accuracy_batch)
             print('------------------------------------')
+
             topo_losses_batches.append(topo_loss_)  # 10 labels
             losses_batches.append(loss_batch)
+
+            accuracy_batches.append(accuracy_batch)
+            accuracy_topo_batches.append(accuracy_topo)
 
         # TODO Validation for none and with TopoReg
         val_losses_epoch_none_topo = []
         val_losses_epoch_topo = []
 
+        val_accuracies_topo = []
+        val_accuracies_none_topo = []
+
         for validation_inputs, validation_labels in val_dataset:
-            val_loss_topo = loss_object(validation_labels,
-                                        _compute_predictions(validation_inputs, model_topo_reg)).numpy()
-            val_loss_none_topo = loss_object(validation_labels,
-                                             _compute_predictions(validation_inputs, model_none_topo_reg)).numpy()
+            pred = _compute_predictions(validation_inputs, model_topo_reg)
+            val_loss_topo = loss_object(validation_labels, pred).numpy()
+            val_accuracy_topo = accuracy_model(validation_labels, pred).numpy()
+
+            pred = _compute_predictions(validation_inputs, model_none_topo_reg)
+            val_loss_none_topo = loss_object(validation_labels, pred).numpy()
+            val_accuracy_none_topo = accuracy_model(validation_labels, pred).numpy()
 
             val_losses_epoch_none_topo.append(val_loss_none_topo)
             val_losses_epoch_topo.append(val_loss_topo)
 
+            val_accuracies_topo.append(val_accuracy_topo)
+            val_accuracies_none_topo.append(val_accuracy_none_topo)
+
         validation_losses.append((val_losses_epoch_none_topo, val_losses_epoch_topo))
+        validation_accuracies.append((val_accuracies_none_topo, val_accuracies_topo))
         topo_losses_epochs.append(topo_losses_batches)
         losses_epochs.append(losses_batches)
+        topo_accuracies_epochs.append(accuracy_topo_batches)
+        accuracies_epochs.append(accuracy_batches)
 
     print('Losses epochs: ', losses_epochs)
     outputFile = open('losses_epochs.pkl', 'wb')
@@ -164,9 +202,24 @@ if __name__ == '__main__':
     pickle.dump(topo_losses_epochs, outputFile)
     outputFile.close()
 
-    print('Validations epochs: ', validation_losses)
-    outputFile = open('validations_epochs.pkl', 'wb')
+    print('Topological accuracies epochs: ', topo_accuracies_epochs)
+    outputFile = open('topo_accuracies_epochs.pkl', 'wb')
+    pickle.dump(topo_accuracies_epochs, outputFile)
+    outputFile.close()
+
+    print('Topological losses epochs: ', accuracies_epochs)
+    outputFile = open('accuracies_epochs.pkl', 'wb')
+    pickle.dump(accuracies_epochs, outputFile)
+    outputFile.close()
+
+    print('Validations losses epochs: ', validation_losses)
+    outputFile = open('validations_losses.pkl', 'wb')
     pickle.dump(validation_losses, outputFile)
+    outputFile.close()
+
+    print('Validations accuracies epochs: ', validation_accuracies)
+    outputFile = open('validations_accuracies.pkl', 'wb')
+    pickle.dump(validation_accuracies, outputFile)
     outputFile.close()
 
     print('Finished')
