@@ -14,6 +14,14 @@ Hacer gráfico que compare accuracies para todas las redes
 """
 
 
+def plot_points(X):
+    plt.figure()
+    x = X[:, 0]
+    y = X[:, 1]
+    plt.scatter(x, y)
+    plt.show()
+
+
 def plot_point_movement(X_opt, lr, grads):
     pts_to_move = np.argwhere(np.linalg.norm(grads[0], axis=1) != 0).ravel()
     plt.figure()
@@ -61,29 +69,40 @@ def prove_correlation():
     plot_point_movement(X_opt, lr, grads)
 
 
-def prove_homologies(num_epochs=10):
-    X = np.array([[0.1, 0.], [1.5, 1.5], [0., 1.6]])
+def prove_homologies(num_epochs=100):
+    # X = np.array([[0.1, 0.], [1.5, 1.5], [0., 1.6]])
+    point_cloud = np.random.rand(60, 2)
     lr = 1
 
-    X = tf.Variable(X, tf.float32)
+    plot_points(point_cloud)
+
+    X = tf.Variable(point_cloud, tf.float32)
 
     losses, _, X_opt, grads = diff_point_cloud_test(X=X, num_epochs=num_epochs, lr=lr, dim=0)
 
-    print(X_opt)
+    print('----------------------')
+    print(len(X_opt))
+    print('----------------------')
+    # plot_point_movement(X_opt, lr, grads)
+    plot_points(X_opt[30])
 
-    plot_point_movement(X_opt, lr, grads)
+    X = tf.Variable(point_cloud, tf.float32)
 
     losses, _, X_opt, grads = diff_point_cloud_test(X=X, num_epochs=num_epochs, lr=lr, dim=1)
 
-    print(X_opt)
+    print('----------------------')
+    print(len(X_opt))
+    print('----------------------')
+    plot_points(X_opt[30])
 
-    plot_point_movement(X_opt, lr, grads)
+    X = tf.Variable(point_cloud, tf.float32)
 
     losses, _, X_opt, grads = diff_point_cloud_test(X=X, num_epochs=num_epochs, lr=lr, dim=2)
 
-    print(X_opt)
-
-    plot_point_movement(X_opt, lr, grads)
+    print('----------------------')
+    print(len(X_opt))
+    print('----------------------')
+    plot_points(X_opt[30])
 
 
 if __name__ == '__main__':
