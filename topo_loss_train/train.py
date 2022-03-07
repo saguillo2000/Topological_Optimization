@@ -1,17 +1,19 @@
-import numpy as np
-from gudhi.wasserstein import wasserstein_distance
-
-from constraints import EPOCH_ITERATIONS_TO_INCREMENT_ITERATION_BATCHES, SAVING_MODEL_BATCHES_ITERATIONS_PERIOD, \
-    POSSIBLE_LEARNING_RATES
-from filtrations import RipsModel
-from networks.train import _save_model
-from point_cloud_diff.diff import diff_point_cloud
-
-import tensorflow as tf
 from functools import partial
 
-EPOCHS = 60
-TRIAL_EPOCHS = 4
+import tensorflow as tf
+import numpy as np
+
+from gudhi.wasserstein import wasserstein_distance
+from keras.models import clone_model
+
+from filtrations import RipsModel
+from model import NeuronSpace
+from model.NeuronClusteringStrategies import AverageImportanceStrategy
+from tensorflow.keras import losses
+
+from ToyNeuralNetworks.datasets.CIFAR10.dataset import get_dataset
+
+import pickle
 
 
 def fibonacci(initial_a=1, initial_b=1):
@@ -22,37 +24,33 @@ def fibonacci(initial_a=1, initial_b=1):
         a, b = b, a + b
 
 
-def train_nn_topo(model, train_dataset, dim, distance, topo_penalty,
-                  loss_metric_model,
-                  accuracy_model,
-                  loss_object_model,
-                  optimizer=tf.optimizers.Adam,
-                  epochs=EPOCHS):
-    model = tf.keras.models.clone_model(model)
-    loss_object = loss_object_model
-    epoch = 0
-    predictions = {}
-
-    while epoch < epochs:
-
-        for inputs, label in train_dataset:
-            if not predictions[label]:
-                predictions[label] = []
-            predictions[label].append((_compute_predictions(inputs, model), inputs))
-
-        for label in predictions.keys():
-            predictions_point_cloud = [predictions[0] for predictions in predictions[label]]
-            inputs = [inputs[1] for inputs in predictions[label]]
-            with tf.GradientTape() as tape:
-                Dg = RipsModel(X=predictions_point_cloud, mel=10, dim=dim, card=10, distance=distance).call()
-                topo_loss = wasserstein_distance(Dg, tf.constant(np.empty([0, 2])), order=1, enable_autodiff=True)
-                for _input in inputs:
-                    point_loss = loss_object([label], _compute_predictions(_input))
-                    loss = topo_penalty*topo_loss + (1 - topo_penalty)*point_loss
-                    gradients = tape.gradient(loss, model.trainable_variables)
-                    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+def batches_generator(number_of_batches):
+    train_dataset_list = list(train_dataset)
+    current_batch = 0
+    while True:
+        epoch_changed = False
+        train_batches = []
+        until_idx = (current_batch + number_of_batches) % len(train_dataset_list)
+        if until_idx <= current_batch:
+            train_batches.extend(train_dataset_list[current_batch:])
+            train_batches.extend(train_dataset_list[:until_idx])
+            epoch_changed = True
+        elif until_idx > current_batch:
+            train_batches.extend(train_dataset_list[current_batch:until_idx])
+        current_batch = until_idx
+        yield train_batches, epoch_changed
 
 
+def group_label(inputs, labels):
+    groups = dict()
+
+    for idx in range(len(labels)):
+        label = str(int(labels[idx]))
+        if label not in groups:
+            groups[label] = []
+        groups[label].append(inputs[idx])
+
+    return groups
 
 
 @tf.function
@@ -60,71 +58,181 @@ def _compute_predictions(inputs, model):
     return model(inputs)
 
 
-def _train_step(inputs, labels, model, loss_object, optimizer, train_loss=None, train_accuracy=None):
+def accuracy_model(name):
+    return tf.metrics.SparseCategoricalAccuracy(name=name)
+
+
+def labels_from_predictions(_predictions):
+    return tf.expand_dims(tf.math.argmax(_predictions, 1), 1)
+
+
+def train_step_topo(topo_reg, model, optimizer, loss_object, inputs, labels):
+    X = neuron_space_strategy(model, inputs)  # Inputs all batch, with labels X = inputs
+    X = tf.Variable(X.array, tf.float64)
+
+    with tf.GradientTape() as tape:
+        Dg = RipsModel(X=X, mel=10, dim=0, card=10).call()
+        topo_loss = wasserstein_distance(Dg, tf.constant(np.empty([0, 2])), order=1, enable_autodiff=True)
+
+        predictions_topo_reg = _compute_predictions(inputs, model)
+
+        single_loss_topo_reg = loss_object(labels, predictions_topo_reg)
+
+        loss_topo_reg = (topo_reg * topo_loss) + (1 - topo_reg) * single_loss_topo_reg
+
+    gradients_topo = tape.gradient(loss_topo_reg, model.trainable_variables)
+    optimizer.apply_gradients(zip(gradients_topo, model.trainable_variables))
+
+
+def train_step(model, optimizer, loss_object, inputs, labels):
     with tf.GradientTape() as tape:
         predictions = _compute_predictions(inputs, model)
-        loss = loss_object(labels, predictions)
-    gradients = tape.gradient(loss, model.trainable_variables)
+
+        loss_none_topo_reg = loss_object(labels, predictions)
+
+    gradients = tape.gradient(loss_none_topo_reg, model.trainable_variables)
     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-    if train_loss:
-        train_loss(loss)
-    if train_accuracy:
-        train_accuracy(labels, predictions)
 
 
-def _metrics_step(inputs, labels, model, loss_object, train_loss, train_accuracy):
-    predictions = _compute_predictions(inputs, model)
-    loss = loss_object(labels, predictions)
-    train_loss(loss)
-    train_accuracy(labels, predictions)
+def train_experiment(topo_reg, accuracy_model, loss_object, model, optimizer,
+                     train_dataset, val_dataset, neuron_space_strategy):
+    model_topo_reg = clone_model(model)
+    model_none_topo_reg = clone_model(model)
 
-
-def _test_step(inputs, labels, model, loss_object, test_loss, test_accuracy):
-    predictions = _compute_predictions(inputs, model)
-    t_loss = loss_object(labels, predictions)
-    test_loss(t_loss)
-    test_accuracy(labels, predictions)
-
-
-@tf.function
-def _calculate_validation_accuracy(inputs, labels, model, loss_object, validation_loss):
-    predictions = model(inputs)
-    t_loss = loss_object(labels, predictions)
-    validation_loss(t_loss)
-
-
-def _train_trials(model, train_dataset, validation_dataset, epochs, optimizer, loss_metric_model, loss_object_model):
-    train_loss = loss_metric_model(name='trial_train_loss')
-    validation_loss = loss_metric_model(name='trial_validation_loss')
-
-    loss_object = loss_object_model
     for epoch in range(epochs):
-        for inputs, labels in train_dataset:
-            _train_step(inputs, labels, model, loss_object, optimizer, train_loss)
+        print('--------------------------------------')
+        print('--------------------------------------')
+        print('Epoch number:', epoch)
+        print('--------------------------------------')
+        print('--------------------------------------')
 
-        for validation_inputs, validation_labels in validation_dataset:
-            _calculate_validation_accuracy(validation_inputs, validation_labels, model, loss_object, validation_loss)
-        print("Trial Epoch: ", epoch)
-        print("Validation_loss", validation_loss.result())
-        train_loss.reset_states()
-        if epoch != epochs - 1:
-            validation_loss.reset_states()
-    validation_result = validation_loss.result().numpy()
-    validation_loss.reset_states()
-    return float(validation_result)
+        losses_batches = []
+        topo_losses_batches = []
+
+        accuracy_batches = []
+        accuracy_topo_batches = []
+
+        # number_of_batches = next(batches_incrementation_strategy)
+        # number_of_batches = min(len(train_dataset), number_of_batches)
+        # assert number_of_batches <= len(train_dataset)
+        number_of_batches = 20
+        train_batches = batches_generator(number_of_batches)
+
+        batches, changed_epoch = next(train_batches)
+
+        for inputs, labels in batches:
+
+            train_step_topo(topo_reg, model_topo_reg, optimizer, loss_object, inputs, labels)
+            train_step(model_none_topo_reg, optimizer, loss_object, inputs, labels)
+
+            predictions = _compute_predictions(inputs, model_none_topo_reg)
+            predictions_topo_reg = _compute_predictions(inputs, model_topo_reg)
+            print('Labels: ', labels)
+            print('Predictions None reg: ', predictions)
+            print('Predictions Reg: ', predictions_topo_reg)
+
+        val_losses_epoch_none_topo = []
+        val_losses_epoch_topo = []
+
+        val_accuracies_topo = []
+        val_accuracies_none_topo = []
+
+        for validation_inputs, validation_labels in val_dataset:
+            pred = _compute_predictions(validation_inputs, model_topo_reg)
+            val_loss_topo = loss_object_val_topo(validation_labels, pred).numpy()
+            val_accuracy_topo = accuracy_model_val_topo(validation_labels, labels_from_predictions(pred)).numpy()
+
+            pred = _compute_predictions(validation_inputs, model_none_topo_reg)
+            val_loss_none_topo = loss_object_val_none_topo(validation_labels, pred).numpy()
+            val_accuracy_none_topo = accuracy_model_val_none_topo(validation_labels,
+                                                                  labels_from_predictions(pred)).numpy()
+
+            val_losses_epoch_none_topo.append(val_loss_none_topo)
+            val_losses_epoch_topo.append(val_loss_topo)
+
+            val_accuracies_topo.append(val_accuracy_topo)
+            val_accuracies_none_topo.append(val_accuracy_none_topo)
+
+        validation_losses.append((val_losses_epoch_none_topo, val_losses_epoch_topo))
+        validation_accuracies.append((val_accuracies_none_topo, val_accuracies_topo))
+        topo_losses_epochs.append(topo_losses_batches)
+        losses_epochs.append(losses_batches)
+        topo_accuracies_epochs.append(accuracy_topo_batches)
+        accuracies_epochs.append(accuracy_batches)
 
 
-def _select_best_model_and_optimizer(model, train_dataset, validation_dataset, trial_epochs, optimizer,
-                                     loss_metric_model, loss_object_model):
-    models_x_optimizers = list(
-        map(lambda lr: (tf.keras.models.clone_model(model), optimizer(learning_rate=lr)),
-            POSSIBLE_LEARNING_RATES))
-    val_losses = list(map(lambda model_x_optimizer:
-                          _train_trials(model_x_optimizer[0], train_dataset, validation_dataset, trial_epochs,
-                                        model_x_optimizer[1], loss_metric_model, loss_object_model),
-                          models_x_optimizers))
-    models_x_optimizers_x_val_losses = zip(models_x_optimizers, val_losses)
-    return min(models_x_optimizers_x_val_losses, key=lambda model: model[1])[0]
+if __name__ == '__main__':
+    topo_reg = 0.3
+    train_dataset, val_dataset, test_dataset = get_dataset()
 
+    # Functions for training and pick model
 
+    accuracy_model_topo = accuracy_model(name='accuracy_topo')
+    accuracy_model_none_topo = accuracy_model(name='accuracy_none_topo')
+    accuracy_model_val_topo = accuracy_model(name='accuracy_topo')
+    accuracy_model_val_none_topo = accuracy_model(name='accuracy_none_topo')
 
+    loss_object_topo = losses.SparseCategoricalCrossentropy(from_logits=True)
+    loss_object_none_topo = losses.SparseCategoricalCrossentropy(from_logits=True)
+    loss_object_val_topo = losses.SparseCategoricalCrossentropy(from_logits=True)
+    loss_object_val_none_topo = losses.SparseCategoricalCrossentropy(from_logits=True)
+
+    # generate_networks(1, (32, 32, 3), 8, 10, 4000)[0]
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Flatten(input_shape=[32, 32, 3]),
+        tf.keras.layers.Dense(100, activation="relu"),
+        tf.keras.layers.Dense(100, activation="relu"),
+        tf.keras.layers.Dense(100, activation="relu"),
+        tf.keras.layers.Dense(10, activation="softmax")
+    ])
+
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
+
+    print('MODEL ARCHITECTURE FOR TOPO REG AND NONE TOPO REG: ')
+    print(model.summary())
+
+    batches_incrementation_strategy = partial(fibonacci, initial_a=34, initial_b=55)
+    clustering_strategy = partial(AverageImportanceStrategy.average_importance_clustering, number_of_neurons=3000)
+    neuron_space_strategy = partial(NeuronSpace.get_neuron_activation_space_with_clustering,
+                                    neuron_clustering_strategy=clustering_strategy)
+    epochs = 20
+    batches_incrementation_strategy = fibonacci(initial_a=34, initial_b=55)
+
+    losses_epochs = []
+    topo_losses_epochs = []
+    topo_accuracies_epochs = []
+    accuracies_epochs = []
+    validation_losses = []
+    validation_accuracies = []
+
+    print('Losses epochs: ', losses_epochs)
+    outputFile = open('losses_epochs.pkl', 'wb')
+    pickle.dump(losses_epochs, outputFile)
+    outputFile.close()
+
+    print('Topological losses epochs: ', topo_losses_epochs)
+    outputFile = open('topo_losses_epochs.pkl', 'wb')
+    pickle.dump(topo_losses_epochs, outputFile)
+    outputFile.close()
+
+    print('Topological accuracies epochs: ', topo_accuracies_epochs)
+    outputFile = open('topo_accuracies_epochs.pkl', 'wb')
+    pickle.dump(topo_accuracies_epochs, outputFile)
+    outputFile.close()
+
+    print('Topological losses epochs: ', accuracies_epochs)
+    outputFile = open('accuracies_epochs.pkl', 'wb')
+    pickle.dump(accuracies_epochs, outputFile)
+    outputFile.close()
+
+    print('Validations losses epochs: ', validation_losses)
+    outputFile = open('validations_losses.pkl', 'wb')
+    pickle.dump(validation_losses, outputFile)
+    outputFile.close()
+
+    print('Validations accuracies epochs: ', validation_accuracies)
+    outputFile = open('validations_accuracies.pkl', 'wb')
+    pickle.dump(validation_accuracies, outputFile)
+    outputFile.close()
+
+    print('Finished')

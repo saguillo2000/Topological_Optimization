@@ -62,14 +62,33 @@ def _compute_predictions(inputs, model):
     return model(inputs)
 
 
+def accuracy_model(name):
+    return tf.metrics.SparseCategoricalAccuracy(name=name)
+
+
+def labels_from_predictions(_predictions):
+    return tf.expand_dims(tf.math.argmax(_predictions, 1), 1)
+
+def train_step():
+    return 0
+
+
 if __name__ == '__main__':
     topo_reg = 0.3
     train_dataset, val_dataset, test_dataset = get_dataset()
 
     # Functions for training and pick model
 
-    accuracy_model = tf.metrics.SparseCategoricalAccuracy()
-    loss_object = losses.SparseCategoricalCrossentropy(from_logits=True)
+    accuracy_model_topo = accuracy_model(name='accuracy_topo')
+    accuracy_model_none_topo = accuracy_model(name='accuracy_none_topo')
+    accuracy_model_val_topo = accuracy_model(name='accuracy_topo')
+    accuracy_model_val_none_topo = accuracy_model(name='accuracy_none_topo')
+
+    loss_object_topo = losses.SparseCategoricalCrossentropy(from_logits=True)
+    loss_object_none_topo = losses.SparseCategoricalCrossentropy(from_logits=True)
+    loss_object_val_topo = losses.SparseCategoricalCrossentropy(from_logits=True)
+    loss_object_val_none_topo = losses.SparseCategoricalCrossentropy(from_logits=True)
+
     # generate_networks(1, (32, 32, 3), 8, 10, 4000)[0]
     model_topo_reg = tf.keras.models.Sequential([
         tf.keras.layers.Flatten(input_shape=[32, 32, 3]),
@@ -78,8 +97,17 @@ if __name__ == '__main__':
         tf.keras.layers.Dense(100, activation="relu"),
         tf.keras.layers.Dense(10, activation="softmax")
     ])
-    model_none_topo_reg = clone_model(model_topo_reg)
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
+    model_none_topo_reg = tf.keras.models.Sequential([
+        tf.keras.layers.Flatten(input_shape=[32, 32, 3]),
+        tf.keras.layers.Dense(100, activation="relu"),
+        tf.keras.layers.Dense(100, activation="relu"),
+        tf.keras.layers.Dense(100, activation="relu"),
+        tf.keras.layers.Dense(10, activation="softmax")
+    ])
+
+    optimizer_topo = tf.keras.optimizers.Adam(learning_rate=0.1)
+    optimizer_none_topo = tf.keras.optimizers.Adam(learning_rate=0.1)
+
     print('MODEL ARCHITECTURE FOR TOPO REG AND NONE TOPO REG: ')
     print(model_topo_reg.summary())
 
@@ -108,7 +136,7 @@ if __name__ == '__main__':
         topo_losses_batches = []
 
         accuracy_batches = []
-        accuracy_topo_batches= []
+        accuracy_topo_batches = []
 
         # number_of_batches = next(batches_incrementation_strategy)
         # number_of_batches = min(len(train_dataset), number_of_batches)
@@ -124,31 +152,34 @@ if __name__ == '__main__':
             X = tf.Variable(X.array, tf.float64)
 
             with tf.GradientTape() as tape:
-                Dg = RipsModel(X=X, mel=10, dim=0, card=10, distance=distance_corr_tf).call()
+                Dg = RipsModel(X=X, mel=10, dim=0, card=10).call()
                 topo_loss = wasserstein_distance(Dg, tf.constant(np.empty([0, 2])), order=1, enable_autodiff=True)
 
                 predictions_topo_reg = _compute_predictions(inputs, model_topo_reg)
 
-                single_loss_topo_reg = loss_object(labels, predictions_topo_reg)
+                single_loss_topo_reg = loss_object_topo(labels, predictions_topo_reg)
 
-                loss_topo_reg = -(topo_reg * topo_loss) + (1 - topo_reg) * single_loss_topo_reg
+                loss_topo_reg = (topo_reg * topo_loss) + (1 - topo_reg) * single_loss_topo_reg
 
             gradients_topo = tape.gradient(loss_topo_reg, model_topo_reg.trainable_variables)
-            optimizer.apply_gradients(zip(gradients_topo, model_topo_reg.trainable_variables))
+            optimizer_topo.apply_gradients(zip(gradients_topo, model_topo_reg.trainable_variables))
 
             with tf.GradientTape() as tape:
                 predictions = _compute_predictions(inputs, model_none_topo_reg)
 
-                loss_none_topo_reg = loss_object(labels, predictions)
+                loss_none_topo_reg = loss_object_none_topo(labels, predictions)
 
             gradients = tape.gradient(loss_none_topo_reg, model_none_topo_reg.trainable_variables)
-            optimizer.apply_gradients(zip(gradients, model_none_topo_reg.trainable_variables))
+            optimizer_none_topo.apply_gradients(zip(gradients, model_none_topo_reg.trainable_variables))
 
             loss_batch = loss_none_topo_reg.numpy()
             topo_loss_ = loss_topo_reg.numpy()
 
-            accuracy_batch = accuracy_model(labels, predictions).numpy()
-            accuracy_topo = accuracy_model(labels, predictions_topo_reg).numpy()
+            print('Labels: ', labels)
+            print('Predictions None reg: ', predictions)
+            print('Predictions Reg: ', predictions_topo_reg)
+            accuracy_batch = accuracy_model_none_topo(labels, labels_from_predictions(predictions)).numpy()
+            accuracy_topo = accuracy_model_topo(labels, labels_from_predictions(predictions_topo_reg)).numpy()
 
             print('------------------------------------')
             print('Loss with Topo Reg :', topo_loss_)
@@ -163,7 +194,6 @@ if __name__ == '__main__':
             accuracy_batches.append(accuracy_batch)
             accuracy_topo_batches.append(accuracy_topo)
 
-        # TODO Validation for none and with TopoReg
         val_losses_epoch_none_topo = []
         val_losses_epoch_topo = []
 
@@ -172,12 +202,12 @@ if __name__ == '__main__':
 
         for validation_inputs, validation_labels in val_dataset:
             pred = _compute_predictions(validation_inputs, model_topo_reg)
-            val_loss_topo = loss_object(validation_labels, pred).numpy()
-            val_accuracy_topo = accuracy_model(validation_labels, pred).numpy()
+            val_loss_topo = loss_object_val_topo(validation_labels, pred).numpy()
+            val_accuracy_topo = accuracy_model_val_topo(validation_labels, labels_from_predictions(pred)).numpy()
 
             pred = _compute_predictions(validation_inputs, model_none_topo_reg)
-            val_loss_none_topo = loss_object(validation_labels, pred).numpy()
-            val_accuracy_none_topo = accuracy_model(validation_labels, pred).numpy()
+            val_loss_none_topo = loss_object_val_none_topo(validation_labels, pred).numpy()
+            val_accuracy_none_topo = accuracy_model_val_none_topo(validation_labels, labels_from_predictions(pred)).numpy()
 
             val_losses_epoch_none_topo.append(val_loss_none_topo)
             val_losses_epoch_topo.append(val_loss_topo)
