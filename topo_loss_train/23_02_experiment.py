@@ -105,8 +105,8 @@ if __name__ == '__main__':
         tf.keras.layers.Dense(10, activation="softmax")
     ])
 
-    optimizer_topo = tf.keras.optimizers.Adam(learning_rate=0.1)
-    optimizer_none_topo = tf.keras.optimizers.Adam(learning_rate=0.1)
+    optimizer_topo = tf.keras.optimizers.Adam()
+    optimizer_none_topo = tf.keras.optimizers.Adam()
 
     print('MODEL ARCHITECTURE FOR TOPO REG AND NONE TOPO REG: ')
     print(model_topo_reg.summary())
