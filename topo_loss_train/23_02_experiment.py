@@ -15,7 +15,8 @@ from model.NeuronClusteringStrategies import AverageImportanceStrategy
 from tensorflow.keras import losses
 
 from ToyNeuralNetworks.datasets.CIFAR10.dataset import get_dataset
-from ToyNeuralNetworks.networks.MLP.mlp_generation import generate_networks
+
+from sklearn.metrics import classification_report
 
 import pickle
 
@@ -68,9 +69,6 @@ def accuracy_model(name):
 
 def labels_from_predictions(_predictions):
     return tf.expand_dims(tf.math.argmax(_predictions, 1), 1)
-
-def train_step():
-    return 0
 
 
 if __name__ == '__main__':
@@ -175,17 +173,20 @@ if __name__ == '__main__':
             loss_batch = loss_none_topo_reg.numpy()
             topo_loss_ = loss_topo_reg.numpy()
 
-            print('Labels: ', labels)
-            print('Predictions None reg: ', predictions)
-            print('Predictions Reg: ', predictions_topo_reg)
-            accuracy_batch = accuracy_model_none_topo(labels, labels_from_predictions(predictions)).numpy()
-            accuracy_topo = accuracy_model_topo(labels, labels_from_predictions(predictions_topo_reg)).numpy()
+            labels_prediction = labels_from_predictions(predictions)
+            labels_prediction_topo = labels_from_predictions(predictions_topo_reg)
 
+            print('Labels: ', labels)
+            print('Predictions None reg: ', labels_prediction)
+            print('Predictions Reg: ', labels_prediction_topo)
+
+            accuracy_batch = classification_report(labels, labels_prediction, output_dict=True)
+            accuracy_topo = classification_report(labels, labels_prediction_topo, output_dict=True)
             print('------------------------------------')
             print('Loss with Topo Reg :', topo_loss_)
             print('Loss without Topo Reg: ', loss_batch)
-            print('Accuracy with Topo Reg :', accuracy_topo)
-            print('Accuracy without Topo Reg: ', accuracy_batch)
+            print('Accuracy with Topo Reg :\n', classification_report(labels, labels_prediction))
+            print('Accuracy without Topo Reg: \n', classification_report(labels, labels_prediction_topo))
             print('------------------------------------')
 
             topo_losses_batches.append(topo_loss_)  # 10 labels
@@ -207,7 +208,8 @@ if __name__ == '__main__':
 
             pred = _compute_predictions(validation_inputs, model_none_topo_reg)
             val_loss_none_topo = loss_object_val_none_topo(validation_labels, pred).numpy()
-            val_accuracy_none_topo = accuracy_model_val_none_topo(validation_labels, labels_from_predictions(pred)).numpy()
+            val_accuracy_none_topo = accuracy_model_val_none_topo(validation_labels,
+                                                                  labels_from_predictions(pred)).numpy()
 
             val_losses_epoch_none_topo.append(val_loss_none_topo)
             val_losses_epoch_topo.append(val_loss_topo)

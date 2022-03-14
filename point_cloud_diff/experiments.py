@@ -108,5 +108,5 @@ def prove_homologies(num_epochs=100):
 if __name__ == '__main__':
     # execute only if run as the entry point into the program
     # prove_correlation()
-    # prove_euclidean_distance()
-    prove_homologies()
+    prove_euclidean_distance()
+    # prove_homologies()
