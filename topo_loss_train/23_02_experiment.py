@@ -17,6 +17,7 @@ from tensorflow.keras import losses
 from ToyNeuralNetworks.datasets.CIFAR10.dataset import get_dataset
 
 from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
 
 import pickle
 
@@ -56,6 +57,11 @@ def group_label(inputs, labels):
         groups[label].append(inputs[idx])
 
     return groups
+
+
+def accuracy_per_class(y_true, y_pred):
+    matrix = confusion_matrix(y_true, y_pred)
+    return matrix.diagonal() / matrix.sum(axis=1)
 
 
 @tf.function
@@ -114,7 +120,6 @@ if __name__ == '__main__':
     neuron_space_strategy = partial(NeuronSpace.get_neuron_activation_space_with_clustering,
                                     neuron_clustering_strategy=clustering_strategy)
     epochs = 20
-    batches_incrementation_strategy = fibonacci(initial_a=34, initial_b=55)
 
     losses_epochs = []
     topo_losses_epochs = []
@@ -180,13 +185,14 @@ if __name__ == '__main__':
             print('Predictions None reg: ', labels_prediction)
             print('Predictions Reg: ', labels_prediction_topo)
 
-            accuracy_batch = classification_report(labels, labels_prediction, output_dict=True)
-            accuracy_topo = classification_report(labels, labels_prediction_topo, output_dict=True)
+            # classification_report(labels, labels_prediction, zero_division=0, output_dict=True)
+            accuracy_batch = accuracy_per_class(labels, labels_prediction)
+            accuracy_topo = accuracy_per_class(labels, labels_prediction_topo)
             print('------------------------------------')
             print('Loss with Topo Reg :', topo_loss_)
             print('Loss without Topo Reg: ', loss_batch)
-            print('Accuracy with Topo Reg :\n', classification_report(labels, labels_prediction))
-            print('Accuracy without Topo Reg: \n', classification_report(labels, labels_prediction_topo))
+            print('Accuracy with Topo Reg :\n', accuracy_topo)
+            print('Accuracy without Topo Reg: \n', accuracy_batch)
             print('------------------------------------')
 
             topo_losses_batches.append(topo_loss_)  # 10 labels
@@ -204,12 +210,13 @@ if __name__ == '__main__':
         for validation_inputs, validation_labels in val_dataset:
             pred = _compute_predictions(validation_inputs, model_topo_reg)
             val_loss_topo = loss_object_val_topo(validation_labels, pred).numpy()
-            val_accuracy_topo = accuracy_model_val_topo(validation_labels, labels_from_predictions(pred)).numpy()
+            val_accuracy_topo = accuracy_per_class(validation_labels,
+                                                   labels_from_predictions(pred))
 
             pred = _compute_predictions(validation_inputs, model_none_topo_reg)
             val_loss_none_topo = loss_object_val_none_topo(validation_labels, pred).numpy()
-            val_accuracy_none_topo = accuracy_model_val_none_topo(validation_labels,
-                                                                  labels_from_predictions(pred)).numpy()
+            val_accuracy_none_topo = accuracy_per_class(validation_labels,
+                                                        labels_from_predictions(pred))
 
             val_losses_epoch_none_topo.append(val_loss_none_topo)
             val_losses_epoch_topo.append(val_loss_topo)

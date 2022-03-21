@@ -5,57 +5,34 @@ import numpy as np
 
 from gudhi.wasserstein import wasserstein_distance
 from keras.models import clone_model
+from tensorflow.keras import datasets
 
 from filtrations import RipsModel
 from model import NeuronSpace
 from model.NeuronClusteringStrategies import AverageImportanceStrategy
 from tensorflow.keras import losses
 
-from ToyNeuralNetworks.datasets.CIFAR10.dataset import get_dataset
-
 import pickle
 
+import warnings
 
-def fibonacci(initial_a=1, initial_b=1):
-    a, b = initial_a, initial_b
-    while True:
-        yield a
-        a = b
-        a, b = b, a + b
+warnings.filterwarnings("ignore")
 
 
-def batches_generator(number_of_batches):
-    train_dataset_list = list(train_dataset)
-    current_batch = 0
-    while True:
-        epoch_changed = False
-        train_batches = []
-        until_idx = (current_batch + number_of_batches) % len(train_dataset_list)
-        if until_idx <= current_batch:
-            train_batches.extend(train_dataset_list[current_batch:])
-            train_batches.extend(train_dataset_list[:until_idx])
-            epoch_changed = True
-        elif until_idx > current_batch:
-            train_batches.extend(train_dataset_list[current_batch:until_idx])
-        current_batch = until_idx
-        yield train_batches, epoch_changed
+def accuracy_per_class(true, pred, acc, total_occ):
+    # We start with nan as in this label a class may not appear
+    true = true.numpy().flatten()
+    pred = pred.numpy().flatten()
 
+    for truth, prediction in zip(true, pred):
 
-def group_label(inputs, labels):
-    groups = dict()
+        if np.isnan(acc[truth]):
+            acc[truth] = 0
 
-    for idx in range(len(labels)):
-        label = str(int(labels[idx]))
-        if label not in groups:
-            groups[label] = []
-        groups[label].append(inputs[idx])
+        if truth == prediction:
+            acc[truth] += 1
 
-    return groups
-
-
-@tf.function
-def _compute_predictions(inputs, model):
-    return model(inputs)
+        total_occ[truth] += 1
 
 
 def accuracy_model(name):
@@ -84,51 +61,115 @@ def train_step_topo(topo_reg, neuron_space_strategy, model, optimizer, loss_obje
     optimizer.apply_gradients(zip(gradients_topo, model.trainable_variables))
 
 
-def train_step(model, optimizer, loss_object, inputs, labels):
+@tf.function
+def _compute_predictions(inputs, model):
+    return model(inputs)
+
+
+def train_step(model, optimizer, loss_object, train_loss, train_accuracy, inputs, labels, acc, total_occ):
     with tf.GradientTape() as tape:
         predictions = _compute_predictions(inputs, model)
 
-        loss_none_topo_reg = loss_object(labels, predictions)
+        loss = loss_object(labels, predictions)
 
-    gradients = tape.gradient(loss_none_topo_reg, model.trainable_variables)
+    gradients = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
+    train_loss(loss)
+    train_accuracy(labels, predictions)
+    accuracy_per_class(labels, labels_from_predictions(predictions), acc, total_occ)
 
-def train_experiment(epochs, topo_reg, accuracy_model, loss_object, model, optimizer,
+
+def test_step(images, labels, loss_object, test_loss, test_accuracy, acc, total_occ):
+    predictions = model(images)
+    t_loss = loss_object(labels, predictions)
+
+    test_loss(t_loss)
+    test_accuracy(labels, predictions)
+    accuracy_per_class(labels, labels_from_predictions(predictions), acc, total_occ)
+
+
+def serialize(fileName, content):
+    outputFile = open('{}.pkl'.format(fileName), 'wb')
+    pickle.dump(content, outputFile)
+    outputFile.close()
+
+
+def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
                      train_dataset, val_dataset, neuron_space_strategy):
     model_topo_reg = clone_model(model)
     model_none_topo_reg = clone_model(model)
 
+    train_loss = tf.keras.metrics.Mean(name='train_loss')
+    train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')
+
+    test_loss = tf.keras.metrics.Mean(name='test_loss')
+    test_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='test_accuracy')
+
+    train_ds = tf.data.Dataset.from_tensor_slices(
+        train_dataset).shuffle(10000).batch(32, drop_remainder=True)
+
+    test_ds = tf.data.Dataset.from_tensor_slices(val_dataset).batch(2, drop_remainder=True)
+
+    acc_class_train = []
+    acc_class_test = []
+
     for epoch in range(epochs):
-        print('--------------------------------------')
-        print('--------------------------------------')
-        print('Epoch number:', epoch)
-        print('--------------------------------------')
-        print('--------------------------------------')
 
-        number_of_batches = 20
-        train_batches = batches_generator(number_of_batches)
+        total_occ_train = [0 for x in range(10)]
+        acc_train = [np.nan for x in range(10)]
 
-        batches, changed_epoch = next(train_batches)
+        total_occ_test = [0 for x in range(10)]
+        acc_test = [np.nan for x in range(10)]
 
-        for inputs, labels in batches:
-            train_step_topo(topo_reg, neuron_space_strategy, model_topo_reg, optimizer, loss_object, inputs, labels)
-            train_step(model_none_topo_reg, optimizer, loss_object, inputs, labels)
+        for inputs, labels in train_ds:
+            # train_step_topo(topo_reg, neuron_space_strategy, model_topo_reg, optimizer, loss_object, inputs, labels)
+            train_step(model_none_topo_reg, optimizer, loss_object,
+                       train_loss, train_accuracy, inputs, labels, acc_train, total_occ_train)
 
             predictions = _compute_predictions(inputs, model_none_topo_reg)
             predictions_topo_reg = _compute_predictions(inputs, model_topo_reg)
-            print('Labels: ', labels)
-            print('Predictions None reg: ', predictions)
-            print('Predictions Reg: ', predictions_topo_reg)
+            # print('Labels: ', labels)
+            # print('Predictions None reg: ', predictions)
+            # print('Predictions Reg: ', predictions_topo_reg)
+
+        for inputs, labels in test_ds:
+            test_step(inputs, labels, loss_object, test_loss, test_accuracy,
+                      acc_test, total_occ_test)
+
+        template = 'Epoch {}, Perdida: {}, Exactitud: {}, Perdida de prueba: {}, Exactitud de prueba: {}'
+        print(template.format(epoch + 1,
+                              train_loss.result(),
+                              train_accuracy.result(),
+                              test_loss.result(),
+                              test_accuracy.result()))
+        print('\n Accuracies per class train: ', np.divide(acc_train, total_occ_train))
+        print('\n Accuracies per class test: ', np.divide(acc_test, total_occ_test))
+
+        train_loss.reset_states()
+        train_accuracy.reset_states()
+        test_loss.reset_states()
+        test_accuracy.reset_states()
+
+        acc_class_train.append(np.divide(acc_train, total_occ_train))
+        acc_class_test.append(np.divide(acc_test, total_occ_test))
+
+    serialize('AccuracyClassTrain', acc_class_train)
+    serialize('AccuracyClassTest', acc_class_test)
 
 
 if __name__ == '__main__':
     topo_reg = 0.3
-    train_dataset, val_dataset, test_dataset = get_dataset()
+
+    (train_images, train_labels), (test_images, test_labels) = datasets.cifar10.load_data()
+    train_images, test_images = train_images / 255.0, test_images / 255.0
+
+    train_dataset = (train_images, train_labels)
+    val_dataset = (test_images, test_labels)
 
     accuracy_model = accuracy_model(name='accuracy')
 
-    loss_object = losses.SparseCategoricalCrossentropy(from_logits=True)
+    loss_object = losses.SparseCategoricalCrossentropy()
 
     # generate_networks(1, (32, 32, 3), 8, 10, 4000)[0]
     model = tf.keras.models.Sequential([
@@ -141,7 +182,6 @@ if __name__ == '__main__':
 
     optimizer = tf.keras.optimizers.Adam()
 
-    batches_incrementation_strategy = partial(fibonacci, initial_a=34, initial_b=55)
     clustering_strategy = partial(AverageImportanceStrategy.average_importance_clustering, number_of_neurons=3000)
     neuron_space_strategy = partial(NeuronSpace.get_neuron_activation_space_with_clustering,
                                     neuron_clustering_strategy=clustering_strategy)
@@ -149,5 +189,5 @@ if __name__ == '__main__':
     print('MODEL ARCHITECTURE FOR TOPO REG AND NONE TOPO REG: ')
     print(model.summary())
 
-    train_experiment(20, topo_reg, accuracy_model, loss_object, model, optimizer,
+    train_experiment(20, topo_reg, loss_object, model, optimizer,
                      train_dataset, val_dataset, neuron_space_strategy)

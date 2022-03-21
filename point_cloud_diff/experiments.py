@@ -1,7 +1,11 @@
+import os
+
 from matplotlib import pyplot as plt
 
 from distance_strategies.correlation_strategy import *
 from point_cloud_diff_tests import diff_point_cloud_test
+
+import imageio as imageio
 
 """
 Steps:
@@ -20,6 +24,37 @@ def plot_points(X):
     y = X[:, 1]
     plt.scatter(x, y)
     plt.show()
+
+
+def create_path(dir_path):
+    try:
+        os.makedirs(dir_path)
+    except FileExistsError:
+        pass
+
+
+def build_gif(gif_path, frames_per_image=2, extension='png'):
+    # Build GIF
+    filenames = list(map(lambda filename: int(filename[:-4]), os.listdir(gif_path)))
+    filenames.sort()
+    with imageio.get_writer(f'{gif_path}/result.gif', mode='I') as writer:
+        for filename in [f'{gif_path}/{gif_filename}.{extension}' for gif_filename in filenames]:
+            image = imageio.imread(filename)
+            for _ in range(frames_per_image):
+                writer.append_data(image)
+
+
+def paint_point_cloud(point_cloud, gif_path, number, x_low, x_high, y_low, y_high):
+    plt.clf()
+    if number == -1:
+        plt.title(f'Initial position')
+    else:
+        plt.title(f'Epoch {number}')
+    plt.scatter(point_cloud[:, 0], point_cloud[:, 1])
+    plt.ylim(y_low, y_high)
+    plt.xlim(x_low, x_high)
+    plt.plot()
+    plt.savefig(f'{gif_path}/{number}.png')
 
 
 def plot_point_movement(X_opt, lr, grads):

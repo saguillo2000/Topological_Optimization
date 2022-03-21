@@ -16,17 +16,22 @@ def split_values(validations):
     topo_values = []
     none_topo_values = []
     for index, tuple_ in enumerate(validations):
+
         val_none_topo = tuple_[0]
         val_topo = tuple_[1]
 
-        topo_values.append(sum(val_topo) / len(val_topo))
-        none_topo_values.append(sum(val_none_topo) / len(val_none_topo))
+        topo_values.append(val_topo)
+        none_topo_values.append(val_none_topo)
+
+        print(len(val_topo))
+        print(len(val_none_topo))
 
         print('-------------------')
         print('In epoch: ', index)
         print('-------------------')
-        print('Topological values: ', sum(val_topo) / len(val_topo))
-        print('None topological values: ', sum(val_none_topo) / len(val_none_topo))
+        print('Topological values: ', val_topo)
+        print('None topological values: ', val_none_topo)
+        exit()
 
     return topo_values, none_topo_values
 
@@ -34,11 +39,23 @@ def split_values(validations):
 if __name__ == '__main__':
     none_topo_losses = open_pickle('losses_epochs.pkl')
     topo_losses = open_pickle('topo_losses_epochs.pkl')
-    validations = open_pickle('validations_epochs.pkl')
+
+    none_topo_accuracies = open_pickle('accuracies_epochs.pkl')
+    topo_accuracies = open_pickle('topo_accuracies_epochs.pkl')
+
+    # print(topo_accuracies)
+    print(len(topo_accuracies[0]))
+
+    validations = open_pickle('validations_losses.pkl')
     accuracies = open_pickle('validations_accuracies.pkl')
 
-    validations_topo, validations_none_topo = split_values(validations)
     accuracies_topo, accuracies_none_topo = split_values(accuracies)
+
+    validations_topo, validations_none_topo = split_values(validations)
+
+    print(accuracies[0])
+    print(topo_accuracies)
+    print(none_topo_accuracies)
 
     flat_topo_losses = flat_list(topo_losses)
     flat_none_topo_losses = flat_list(none_topo_losses)
