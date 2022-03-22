@@ -28,11 +28,13 @@ if __name__ == '__main__':
     class_num = 1
     for epoch in acc_class_train:
         plt.plot(plot_range, epoch, label='Class '+str(class_num))
-    plt.legend()
+        class_num += 1
+    plt.legend(prop={'size': 6})
     plt.show()
 
     class_num = 1
     for epoch in acc_class_test:
         plt.plot(plot_range, epoch, label='Class ' + str(class_num))
-    plt.legend()
+        class_num += 1
+    plt.legend(prop={'size': 5.5})
     plt.show()

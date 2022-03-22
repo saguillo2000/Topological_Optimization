@@ -43,7 +43,8 @@ def labels_from_predictions(_predictions):
     return tf.expand_dims(tf.math.argmax(_predictions, 1), 1)
 
 
-def train_step_topo(topo_reg, neuron_space_strategy, model, optimizer, loss_object, inputs, labels):
+def train_step_topo(topo_reg, neuron_space_strategy, model, optimizer,
+                    loss_object, train_loss, train_accuracy, inputs, labels, acc, total_occ):
     X = neuron_space_strategy(model, inputs)  # Inputs all batch, with labels X = inputs
     X = tf.Variable(X.array, tf.float64)
 
@@ -51,14 +52,18 @@ def train_step_topo(topo_reg, neuron_space_strategy, model, optimizer, loss_obje
         Dg = RipsModel(X=X, mel=10, dim=0, card=10).call()
         topo_loss = wasserstein_distance(Dg, tf.constant(np.empty([0, 2])), order=1, enable_autodiff=True)
 
-        predictions_topo_reg = _compute_predictions(inputs, model)
+        predictions = _compute_predictions(inputs, model)
 
-        single_loss_topo_reg = loss_object(labels, predictions_topo_reg)
+        loss = loss_object(labels, predictions)
 
-        loss_topo_reg = (topo_reg * topo_loss) + (1 - topo_reg) * single_loss_topo_reg
+        loss_topo_reg = (topo_reg * topo_loss) + (1 - topo_reg) * loss
 
     gradients_topo = tape.gradient(loss_topo_reg, model.trainable_variables)
     optimizer.apply_gradients(zip(gradients_topo, model.trainable_variables))
+
+    train_loss(loss_topo_reg)
+    train_accuracy(labels, predictions)
+    accuracy_per_class(labels, labels_from_predictions(predictions), acc, total_occ)
 
 
 @tf.function
@@ -80,7 +85,7 @@ def train_step(model, optimizer, loss_object, train_loss, train_accuracy, inputs
     accuracy_per_class(labels, labels_from_predictions(predictions), acc, total_occ)
 
 
-def test_step(images, labels, loss_object, test_loss, test_accuracy, acc, total_occ):
+def test_step(model, images, labels, loss_object, test_loss, test_accuracy, acc, total_occ):
     predictions = model(images)
     t_loss = loss_object(labels, predictions)
 
@@ -97,44 +102,67 @@ def serialize(fileName, content):
 
 def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
                      train_dataset, val_dataset, neuron_space_strategy):
+
     model_topo_reg = clone_model(model)
     model_none_topo_reg = clone_model(model)
 
     train_loss = tf.keras.metrics.Mean(name='train_loss')
     train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')
-
     test_loss = tf.keras.metrics.Mean(name='test_loss')
     test_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='test_accuracy')
 
+    train_loss_topo = tf.keras.metrics.Mean(name='train_loss')
+    train_accuracy_topo = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')
+    test_loss_topo = tf.keras.metrics.Mean(name='test_loss')
+    test_accuracy_topo = tf.keras.metrics.SparseCategoricalAccuracy(name='test_accuracy')
+
     train_ds = tf.data.Dataset.from_tensor_slices(
-        train_dataset).shuffle(10000).batch(32, drop_remainder=True)
+        train_dataset).shuffle(10000).batch(32)
 
-    test_ds = tf.data.Dataset.from_tensor_slices(val_dataset).batch(2, drop_remainder=True)
+    test_ds = tf.data.Dataset.from_tensor_slices(
+        val_dataset).batch(32)
 
-    acc_class_train = []
-    acc_class_test = []
+    acc_train_epochs = []
+    acc_test_epochs = []
+
+    acc_class_epochs_train = []
+    acc_class_epochs_test = []
+
+    acc_train_epochs_topo = []
+    acc_test_epochs_topo = []
+
+    acc_class_epochs_train_topo = []
+    acc_class_epochs_test_topo = []
 
     for epoch in range(epochs):
 
         total_occ_train = [0 for x in range(10)]
         acc_train = [np.nan for x in range(10)]
-
         total_occ_test = [0 for x in range(10)]
         acc_test = [np.nan for x in range(10)]
 
+        total_occ_train_topo = [0 for x in range(10)]
+        acc_train_topo = [np.nan for x in range(10)]
+        total_occ_test_topo = [0 for x in range(10)]
+        acc_test_topo = [np.nan for x in range(10)]
+
+        #num = 0
+
         for inputs, labels in train_ds:
-            # train_step_topo(topo_reg, neuron_space_strategy, model_topo_reg, optimizer, loss_object, inputs, labels)
+            '''
+            train_step_topo(topo_reg, neuron_space_strategy, model_topo_reg,
+                            optimizer, loss_object, train_loss_topo, train_accuracy_topo,
+                            inputs, labels, acc_train_topo, total_occ_train_topo)
+            '''
             train_step(model_none_topo_reg, optimizer, loss_object,
                        train_loss, train_accuracy, inputs, labels, acc_train, total_occ_train)
-
-            predictions = _compute_predictions(inputs, model_none_topo_reg)
-            predictions_topo_reg = _compute_predictions(inputs, model_topo_reg)
-            # print('Labels: ', labels)
-            # print('Predictions None reg: ', predictions)
-            # print('Predictions Reg: ', predictions_topo_reg)
+            #num += 1
+            #print(num)
 
         for inputs, labels in test_ds:
-            test_step(inputs, labels, loss_object, test_loss, test_accuracy,
+            test_step(model_topo_reg, inputs, labels, loss_object, test_loss_topo, test_accuracy_topo,
+                      acc_test_topo, total_occ_test_topo)
+            test_step(model_none_topo_reg, inputs, labels, loss_object, test_loss, test_accuracy,
                       acc_test, total_occ_test)
 
         template = 'Epoch {}, Perdida: {}, Exactitud: {}, Perdida de prueba: {}, Exactitud de prueba: {}'
@@ -143,19 +171,59 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
                               train_accuracy.result(),
                               test_loss.result(),
                               test_accuracy.result()))
-        print('\n Accuracies per class train: ', np.divide(acc_train, total_occ_train))
-        print('\n Accuracies per class test: ', np.divide(acc_test, total_occ_test))
+
+        template = 'TOPO: Epoch {}, Perdida: {}, Exactitud: {}, Perdida de prueba: {}, Exactitud de prueba: {}'
+        print(template.format(epoch + 1,
+                              train_loss_topo.result(),
+                              train_accuracy_topo.result(),
+                              test_loss_topo.result(),
+                              test_accuracy_topo.result()))
+
+        acc_train_epochs.append(train_accuracy.result().numpy()*100)
+        acc_test_epochs.append(test_accuracy.result().numpy()*100)
+
+        acc_train_epochs_topo.append(train_accuracy_topo.result().numpy() * 100)
+        acc_test_epochs_topo.append(test_accuracy_topo.result().numpy() * 100)
+
+        print(acc_train_epochs)
+        print(acc_test_epochs)
+
+        acc_train = np.divide(acc_train, total_occ_train)
+        acc_test = np.divide(acc_test, total_occ_test)
+
+        acc_train_topo = np.divide(acc_train_topo, total_occ_train_topo)
+        acc_test_topo = np.divide(acc_test_topo, total_occ_test_topo)
+
+        print('\n Accuracies per class train: ', acc_train)
+        print('\n Accuracies per class test: ', acc_test)
+        print('\n Accuracies per class train: ', acc_train_topo)
+        print('\n Accuracies per class test: ', acc_test_topo)
 
         train_loss.reset_states()
         train_accuracy.reset_states()
         test_loss.reset_states()
         test_accuracy.reset_states()
 
-        acc_class_train.append(np.divide(acc_train, total_occ_train))
-        acc_class_test.append(np.divide(acc_test, total_occ_test))
+        train_loss_topo.reset_states()
+        train_accuracy_topo.reset_states()
+        test_loss_topo.reset_states()
+        test_accuracy_topo.reset_states()
 
-    serialize('AccuracyClassTrain', acc_class_train)
-    serialize('AccuracyClassTest', acc_class_test)
+        acc_class_epochs_train.append(acc_train)
+        acc_class_epochs_test.append(acc_test)
+
+        acc_class_epochs_train_topo.append(acc_train_topo)
+        acc_class_epochs_test_topo.append(acc_test_topo)
+
+    serialize('AccuracyClassTrain', acc_class_epochs_train)
+    serialize('AccuracyClassTest', acc_class_epochs_test)
+    serialize('AccuracyTrain', acc_train_epochs)
+    serialize('AccuracyTest', acc_test_epochs)
+
+    serialize('AccuracyClassTrainTopo', acc_class_epochs_train_topo)
+    serialize('AccuracyClassTestTopo', acc_class_epochs_test_topo)
+    serialize('AccuracyTrainTopo', acc_train_epochs_topo)
+    serialize('AccuracyTestTopo', acc_test_epochs_topo)
 
 
 if __name__ == '__main__':
