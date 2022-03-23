@@ -1,5 +1,6 @@
 from functools import partial
 
+import pandas as pd
 import tensorflow as tf
 import numpy as np
 
@@ -102,7 +103,6 @@ def serialize(fileName, content):
 
 def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
                      train_dataset, val_dataset, neuron_space_strategy):
-
     model_topo_reg = clone_model(model)
     model_none_topo_reg = clone_model(model)
 
@@ -124,15 +124,16 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
 
     acc_train_epochs = []
     acc_test_epochs = []
-
     acc_class_epochs_train = []
     acc_class_epochs_test = []
 
     acc_train_epochs_topo = []
     acc_test_epochs_topo = []
-
     acc_class_epochs_train_topo = []
     acc_class_epochs_test_topo = []
+
+    loss_epochs = []
+    loss_epochs_topo = []
 
     for epoch in range(epochs):
 
@@ -146,18 +147,17 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
         total_occ_test_topo = [0 for x in range(10)]
         acc_test_topo = [np.nan for x in range(10)]
 
-        #num = 0
+        num = 0
 
         for inputs, labels in train_ds:
-            '''
             train_step_topo(topo_reg, neuron_space_strategy, model_topo_reg,
                             optimizer, loss_object, train_loss_topo, train_accuracy_topo,
                             inputs, labels, acc_train_topo, total_occ_train_topo)
-            '''
+
             train_step(model_none_topo_reg, optimizer, loss_object,
                        train_loss, train_accuracy, inputs, labels, acc_train, total_occ_train)
-            #num += 1
-            #print(num)
+            num += 1
+            print(num)
 
         for inputs, labels in test_ds:
             test_step(model_topo_reg, inputs, labels, loss_object, test_loss_topo, test_accuracy_topo,
@@ -179,14 +179,14 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
                               test_loss_topo.result(),
                               test_accuracy_topo.result()))
 
-        acc_train_epochs.append(train_accuracy.result().numpy()*100)
-        acc_test_epochs.append(test_accuracy.result().numpy()*100)
+        acc_train_epochs.append(train_accuracy.result().numpy() * 100)
+        acc_test_epochs.append(test_accuracy.result().numpy() * 100)
 
         acc_train_epochs_topo.append(train_accuracy_topo.result().numpy() * 100)
         acc_test_epochs_topo.append(test_accuracy_topo.result().numpy() * 100)
 
-        print(acc_train_epochs)
-        print(acc_test_epochs)
+        loss_epochs.append(train_loss.result())
+        loss_epochs_topo.append(train_loss_topo.result())
 
         acc_train = np.divide(acc_train, total_occ_train)
         acc_test = np.divide(acc_test, total_occ_test)
@@ -225,12 +225,25 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
     serialize('AccuracyTrainTopo', acc_train_epochs_topo)
     serialize('AccuracyTestTopo', acc_test_epochs_topo)
 
+    serialize('LossesEpochs', loss_epochs)
+    serialize('LossesEpochsTopo', loss_epochs_topo)
+
+
+def reduce_dataset(train_images, train_labels, reduction=0.01):
+    df = pd.DataFrame(list(zip(train_images, train_labels)), columns=['Image', 'label'])
+    val = df.sample(frac=reduction)
+    X_train = np.array([i for i in list(val['Image'])])
+    y_train = np.array([[i[0]] for i in list(val['label'])])
+    return X_train, y_train
+
 
 if __name__ == '__main__':
     topo_reg = 0.3
 
     (train_images, train_labels), (test_images, test_labels) = datasets.cifar10.load_data()
     train_images, test_images = train_images / 255.0, test_images / 255.0
+
+    train_images, train_labels = reduce_dataset(train_images, train_labels)
 
     train_dataset = (train_images, train_labels)
     val_dataset = (test_images, test_labels)

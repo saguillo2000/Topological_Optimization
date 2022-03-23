@@ -13,28 +13,56 @@ def class_accuracies_epoch(acc):
     return result
 
 
-if __name__ == '__main__':
-    acc_train = open_pickle('AccuracyClassTrain.pkl')
-    acc_test = open_pickle('AccuracyClassTest.pkl')
-
-    print()
-
-    print(acc_test)
-
-    plot_range = [x for x in range(20)]
-    acc_class_train = class_accuracies_epoch(acc_train)
-    acc_class_test = class_accuracies_epoch(acc_test)
-
+def plot_result_class(x, y, title):
     class_num = 1
-    for epoch in acc_class_train:
-        plt.plot(plot_range, epoch, label='Class '+str(class_num))
+    for class_acc in y:
+        plt.plot(x, class_acc, label='Class ' + str(class_num))
         class_num += 1
     plt.legend(prop={'size': 6})
+    plt.title(title)
     plt.show()
 
-    class_num = 1
-    for epoch in acc_class_test:
-        plt.plot(plot_range, epoch, label='Class ' + str(class_num))
-        class_num += 1
-    plt.legend(prop={'size': 5.5})
+
+def plot_results(x, y, labels, title):
+    for label, acc in zip(labels, y):
+        plt.plot(x, acc, label=label)
+    plt.legend(prop={'size': 8})
+    plt.title(title)
     plt.show()
+
+
+if __name__ == '__main__':
+    acc_train_class = open_pickle('AccuracyClassTrain.pkl')
+    acc_test_class = open_pickle('AccuracyClassTest.pkl')
+    acc_train_class_topo = open_pickle('AccuracyClassTrainTopo.pkl')
+    acc_test_class_topo = open_pickle('AccuracyClassTestTopo.pkl')
+
+    plot_range = [x for x in range(20)]
+
+    acc_class_train = class_accuracies_epoch(acc_train_class)
+    acc_class_test = class_accuracies_epoch(acc_test_class)
+    acc_train_class_topo = class_accuracies_epoch(acc_train_class_topo)
+    acc_test_class_topo = class_accuracies_epoch(acc_test_class_topo)
+
+    plot_result_class(plot_range, acc_class_train, 'Class Accuracy Train')
+    plot_result_class(plot_range, acc_class_test, 'Class Accuracy Test')
+    plot_result_class(plot_range, acc_train_class_topo, 'Topo Class Accuracy Train')
+    plot_result_class(plot_range, acc_test_class_topo, 'Topo Class Test Accuracy Test')
+
+    acc_train = open_pickle('AccuracyTrain.pkl')
+    acc_test = open_pickle('AccuracyTest.pkl')
+    acc_train_topo = open_pickle('AccuracyTrainTopo.pkl')
+    acc_test_topo = open_pickle('AccuracyTestTopo.pkl')
+
+    labels = ['Acc Train', 'Acc Test', 'Acc Topo Train', 'Acc Topo Test']
+    accuracies = [acc_train, acc_test, acc_train_topo, acc_test_topo]
+
+    plot_results(plot_range, accuracies, labels, 'Accuracies per epoch')
+
+    los = open_pickle('LossesEpochs.pkl')
+    losses_topo = open_pickle('LossesEpochsTopo.pkl')
+
+    losses = [los, losses_topo]
+    labels = ['Losses', 'Losses Topo']
+
+    plot_results(plot_range, losses, labels, 'Losses per epoch')
