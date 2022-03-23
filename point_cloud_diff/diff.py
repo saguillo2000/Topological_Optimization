@@ -7,7 +7,7 @@ def diff_point_cloud(X, dim, distance):
     with tf.GradientTape() as tape:
         Dg = RipsModel(X=X, mel=10, dim=dim, card=10, distance=distance).call()
         loss = wasserstein_distance(Dg, tf.constant(np.empty([0, 2])), order=1, enable_autodiff=True)
-        # loss = compute_total_persistence(Dg)
+        # loss = - compute_total_persistence(Dg)
 
     gradients = tape.gradient(loss, [X])
 

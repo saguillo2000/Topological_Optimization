@@ -33,30 +33,6 @@ def create_path(dir_path):
         pass
 
 
-def build_gif(gif_path, frames_per_image=2, extension='png'):
-    # Build GIF
-    filenames = list(map(lambda filename: int(filename[:-4]), os.listdir(gif_path)))
-    filenames.sort()
-    with imageio.get_writer(f'{gif_path}/result.gif', mode='I') as writer:
-        for filename in [f'{gif_path}/{gif_filename}.{extension}' for gif_filename in filenames]:
-            image = imageio.imread(filename)
-            for _ in range(frames_per_image):
-                writer.append_data(image)
-
-
-def paint_point_cloud(point_cloud, gif_path, number, x_low, x_high, y_low, y_high):
-    plt.clf()
-    if number == -1:
-        plt.title(f'Initial position')
-    else:
-        plt.title(f'Epoch {number}')
-    plt.scatter(point_cloud[:, 0], point_cloud[:, 1])
-    plt.ylim(y_low, y_high)
-    plt.xlim(x_low, x_high)
-    plt.plot()
-    plt.savefig(f'{gif_path}/{number}.png')
-
-
 def plot_point_movement(X_opt, lr, grads):
     pts_to_move = np.argwhere(np.linalg.norm(grads[0], axis=1) != 0).ravel()
     plt.figure()
@@ -82,7 +58,7 @@ def prove_euclidean_distance():
 
     X = tf.Variable(X, tf.float32)
 
-    losses, _, X_opt, grads = diff_point_cloud_test(X=X, num_epochs=1, lr=lr, dim=0)
+    losses, _, X_opt, grads = diff_point_cloud_test(point_cloud=X, num_epochs=1, lr=lr, dim=0)
 
     print(X_opt)
 
@@ -97,15 +73,15 @@ def prove_correlation():
 
     X = tf.Variable(X, tf.float32)
 
-    losses, _, X_opt, grads = diff_point_cloud_test(X=X, num_epochs=1, lr=lr, dim=0, distance=distance_corr_tf)
+    losses, _, X_opt, grads = diff_point_cloud_test(point_cloud=X, num_epochs=1, lr=lr, dim=0,
+                                                    distance=distance_corr_tf)
 
     print(X_opt)
 
     plot_point_movement(X_opt, lr, grads)
 
 
-def prove_homologies(num_epochs=100):
-    # X = np.array([[0.1, 0.], [1.5, 1.5], [0., 1.6]])
+def prove_homology_0(num_epochs=100):
     point_cloud = np.random.rand(60, 2)
     lr = 1
 
@@ -113,35 +89,21 @@ def prove_homologies(num_epochs=100):
 
     X = tf.Variable(point_cloud, tf.float32)
 
-    losses, _, X_opt, grads = diff_point_cloud_test(X=X, num_epochs=num_epochs, lr=lr, dim=0)
+    losses, _, X_opt, grads = diff_point_cloud_test(point_cloud=X, num_epochs=num_epochs, lr=lr, dim=0)
 
-    print('----------------------')
-    print(len(X_opt))
-    print('----------------------')
-    # plot_point_movement(X_opt, lr, grads)
-    plot_points(X_opt[30])
 
-    X = tf.Variable(point_cloud, tf.float32)
-
-    losses, _, X_opt, grads = diff_point_cloud_test(X=X, num_epochs=num_epochs, lr=lr, dim=1)
-
-    print('----------------------')
-    print(len(X_opt))
-    print('----------------------')
-    plot_points(X_opt[30])
+def prove_homology_1(num_epochs=100):
+    point_cloud = np.random.rand(60, 2)
+    lr = 1
 
     X = tf.Variable(point_cloud, tf.float32)
 
-    losses, _, X_opt, grads = diff_point_cloud_test(X=X, num_epochs=num_epochs, lr=lr, dim=2)
-
-    print('----------------------')
-    print(len(X_opt))
-    print('----------------------')
-    plot_points(X_opt[30])
+    losses, _, X_opt, grads = diff_point_cloud_test(point_cloud=X, num_epochs=num_epochs, lr=lr, dim=1)
 
 
 if __name__ == '__main__':
     # execute only if run as the entry point into the program
     # prove_correlation()
-    prove_euclidean_distance()
+    # prove_euclidean_distance()
     # prove_homologies()
+    prove_homology_0()
