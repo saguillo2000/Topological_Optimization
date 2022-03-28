@@ -38,15 +38,15 @@ def paint_point_cloud(point_cloud, gif_path, number, x_low, x_high, y_low, y_hig
 
 
 def diff_point_cloud_test(point_cloud, num_epochs, lr, dim, distance: Callable[[np.array], tf.Tensor] = None):
-    optimizer = tf.keras.optimizers.SGD(learning_rate=lr)
+    optimizer = tf.keras.optimizers.Adam(lr)
 
     gif_path = './gif'
     create_path(gif_path)
 
-    x_low = -5.0
-    x_high = 8.0
-    y_low = -5.0
-    y_high = 8.0
+    x_low = 0.0
+    x_high = 1000.0
+    y_low = 0.0
+    y_high = 1000.0
 
     losses, Dgs, Xs, grads = [], [], [], []
 

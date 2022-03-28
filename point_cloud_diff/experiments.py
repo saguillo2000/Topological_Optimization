@@ -81,8 +81,11 @@ def prove_correlation():
     plot_point_movement(X_opt, lr, grads)
 
 
-def prove_homology_0(num_epochs=100):
-    point_cloud = np.random.rand(60, 2)
+def prove_homology_0(num_epochs=300):
+    inferior = -1
+    supreme = 1000
+    point_cloud = np.random.rand(1000, 2)
+    point_cloud = point_cloud * supreme + inferior
     lr = 1
 
     plot_points(point_cloud)
