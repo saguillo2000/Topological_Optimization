@@ -37,7 +37,7 @@ if __name__ == '__main__':
     acc_train_class_topo = open_pickle('AccuracyClassTrainTopo.pkl')
     acc_test_class_topo = open_pickle('AccuracyClassTestTopo.pkl')
 
-    plot_range = [x for x in range(20)]
+    plot_range = [x for x in range(30)]
 
     acc_class_train = class_accuracies_epoch(acc_train_class)
     acc_class_test = class_accuracies_epoch(acc_test_class)
@@ -61,8 +61,10 @@ if __name__ == '__main__':
 
     los = open_pickle('LossesEpochs.pkl')
     losses_topo = open_pickle('LossesEpochsTopo.pkl')
+    losses_full_topo = open_pickle('LossesFullTopo.pkl')
+    losses_full_none_topo = open_pickle('LossesFullNoneTopo.pkl')
 
-    losses = [los, losses_topo]
-    labels = ['Losses', 'Losses Topo']
+    losses = [los, losses_topo, losses_full_topo, losses_full_none_topo]
+    labels = ['Losses', 'Losses Topo', 'Loss Full Topo', 'Loss Full None Topo']
 
     plot_results(plot_range, losses, labels, 'Losses per epoch')

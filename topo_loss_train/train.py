@@ -8,6 +8,7 @@ from gudhi.wasserstein import wasserstein_distance
 from keras.models import clone_model
 from tensorflow.keras import datasets
 
+from point_cloud_diff.diff import compute_total_persistence
 from filtrations import RipsModel
 from model import NeuronSpace
 from model.NeuronClusteringStrategies import AverageImportanceStrategy
@@ -45,13 +46,16 @@ def labels_from_predictions(_predictions):
 
 
 def train_step_topo(topo_reg, neuron_space_strategy, model, optimizer,
-                    loss_object, train_loss, train_accuracy, inputs, labels, acc, total_occ):
+                    loss_object, train_loss, train_full_topo_loss, train_full_none_topo_loss,
+                    train_accuracy, inputs, labels, acc, total_occ):
     X = neuron_space_strategy(model, inputs)  # Inputs all batch, with labels X = inputs
     X = tf.Variable(X.array, tf.float64)
 
+    print(tf.shape(X))
+
     with tf.GradientTape() as tape:
-        Dg = RipsModel(X=X, mel=10, dim=0, card=10).call()
-        topo_loss = wasserstein_distance(Dg, tf.constant(np.empty([0, 2])), order=1, enable_autodiff=True)
+        Dg = RipsModel(X=X, mel=30, dim=0, card=10).call()
+        topo_loss = compute_total_persistence(Dg)
 
         predictions = _compute_predictions(inputs, model)
 
@@ -64,6 +68,8 @@ def train_step_topo(topo_reg, neuron_space_strategy, model, optimizer,
 
     train_loss(loss_topo_reg)
     train_accuracy(labels, predictions)
+    train_full_topo_loss(topo_loss)
+    train_full_none_topo_loss(loss)
     accuracy_per_class(labels, labels_from_predictions(predictions), acc, total_occ)
 
 
@@ -111,16 +117,36 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
     test_loss = tf.keras.metrics.Mean(name='test_loss')
     test_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='test_accuracy')
 
+    train_full_topo_loss = tf.keras.metrics.Mean(name='train_full_topo_loss')
+    train_full_none_topo_loss = tf.keras.metrics.Mean(name='train_full_none_topo_loss')
+
     train_loss_topo = tf.keras.metrics.Mean(name='train_loss')
     train_accuracy_topo = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')
     test_loss_topo = tf.keras.metrics.Mean(name='test_loss')
     test_accuracy_topo = tf.keras.metrics.SparseCategoricalAccuracy(name='test_accuracy')
 
+    '''
     train_ds = tf.data.Dataset.from_tensor_slices(
-        train_dataset).shuffle(10000).batch(32)
+        train_dataset).shuffle(10000)
 
     test_ds = tf.data.Dataset.from_tensor_slices(
-        val_dataset).batch(32)
+        val_dataset)
+    '''
+    inputs_train, labels_train = train_dataset
+    inputs_test, labels_test = val_dataset
+
+    print('Shape of inputs training: ', inputs_train.shape)
+    print('Shape of labels training: ', labels_train.shape)
+    print('Shape of inputs test: ', inputs_test.shape)
+    print('Shape of labels test: ', labels_test.shape)
+
+    inputs_train = tf.convert_to_tensor(inputs_train)
+    labels_train = tf.convert_to_tensor(labels_train)
+    inputs_test = tf.convert_to_tensor(inputs_test)
+    labels_test = tf.convert_to_tensor(labels_test)
+
+    print('Shape of inputs training: ', tf.shape(inputs_train))
+    print('Shape of inputs testing: ', tf.shape(inputs_test))
 
     acc_train_epochs = []
     acc_test_epochs = []
@@ -134,9 +160,10 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
 
     loss_epochs = []
     loss_epochs_topo = []
+    loss_epochs_full_topo = []
+    loss_epochs_full_none_topo = []
 
     for epoch in range(epochs):
-
         total_occ_train = [0 for x in range(10)]
         acc_train = [np.nan for x in range(10)]
         total_occ_test = [0 for x in range(10)]
@@ -149,21 +176,22 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
 
         num = 0
 
-        for inputs, labels in train_ds:
-            train_step_topo(topo_reg, neuron_space_strategy, model_topo_reg,
-                            optimizer, loss_object, train_loss_topo, train_accuracy_topo,
-                            inputs, labels, acc_train_topo, total_occ_train_topo)
+        print(type(inputs_train))
 
-            train_step(model_none_topo_reg, optimizer, loss_object,
-                       train_loss, train_accuracy, inputs, labels, acc_train, total_occ_train)
-            num += 1
-            print(num)
+        train_step(model_none_topo_reg, optimizer, loss_object,
+                   train_loss, train_accuracy, inputs_train, labels_train, acc_train, total_occ_train)
 
-        for inputs, labels in test_ds:
-            test_step(model_topo_reg, inputs, labels, loss_object, test_loss_topo, test_accuracy_topo,
-                      acc_test_topo, total_occ_test_topo)
-            test_step(model_none_topo_reg, inputs, labels, loss_object, test_loss, test_accuracy,
-                      acc_test, total_occ_test)
+        train_step_topo(topo_reg, neuron_space_strategy, model_topo_reg,
+                        optimizer, loss_object, train_loss_topo,
+                        train_full_topo_loss, train_full_none_topo_loss, train_accuracy_topo,
+                        inputs_train, labels_train, acc_train_topo, total_occ_train_topo)
+        num += 1
+        print(num)
+
+        test_step(model_topo_reg, inputs_test, labels_test, loss_object, test_loss_topo, test_accuracy_topo,
+                  acc_test_topo, total_occ_test_topo)
+        test_step(model_none_topo_reg, inputs_test, labels_test, loss_object, test_loss, test_accuracy,
+                  acc_test, total_occ_test)
 
         template = 'Epoch {}, Perdida: {}, Exactitud: {}, Perdida de prueba: {}, Exactitud de prueba: {}'
         print(template.format(epoch + 1,
@@ -172,9 +200,12 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
                               test_loss.result(),
                               test_accuracy.result()))
 
-        template = 'TOPO: Epoch {}, Perdida: {}, Exactitud: {}, Perdida de prueba: {}, Exactitud de prueba: {}'
+        template = 'TOPO: Epoch {}, Perdida: {}, Perdida Topo: {},' \
+                   'Perdida Sin Topo: {}, Exactitud: {}, Perdida de prueba: {}, Exactitud de prueba: {}'
         print(template.format(epoch + 1,
                               train_loss_topo.result(),
+                              train_full_topo_loss.result(),
+                              train_full_none_topo_loss,
                               train_accuracy_topo.result(),
                               test_loss_topo.result(),
                               test_accuracy_topo.result()))
@@ -187,6 +218,8 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
 
         loss_epochs.append(train_loss.result())
         loss_epochs_topo.append(train_loss_topo.result())
+        loss_epochs_full_topo.append(train_full_topo_loss.result())
+        loss_epochs_full_none_topo.append(train_full_none_topo_loss.result())
 
         acc_train = np.divide(acc_train, total_occ_train)
         acc_test = np.divide(acc_test, total_occ_test)
@@ -203,6 +236,8 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
         train_accuracy.reset_states()
         test_loss.reset_states()
         test_accuracy.reset_states()
+        train_full_topo_loss.reset_states()
+        train_full_none_topo_loss.reset_states()
 
         train_loss_topo.reset_states()
         train_accuracy_topo.reset_states()
@@ -227,9 +262,11 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
 
     serialize('LossesEpochs', loss_epochs)
     serialize('LossesEpochsTopo', loss_epochs_topo)
+    serialize('LossesFullTopo', loss_epochs_full_topo)
+    serialize('LossesFullNoneTopo', loss_epochs_full_none_topo)
 
 
-def reduce_dataset(train_images, train_labels, reduction=0.01):
+def reduce_dataset(train_images, train_labels, reduction=0.001):
     df = pd.DataFrame(list(zip(train_images, train_labels)), columns=['Image', 'label'])
     val = df.sample(frac=reduction)
     X_train = np.array([i for i in list(val['Image'])])
@@ -238,7 +275,7 @@ def reduce_dataset(train_images, train_labels, reduction=0.01):
 
 
 if __name__ == '__main__':
-    topo_reg = 0.3
+    topo_reg = 1.0
 
     (train_images, train_labels), (test_images, test_labels) = datasets.cifar10.load_data()
     train_images, test_images = train_images / 255.0, test_images / 255.0
@@ -270,5 +307,5 @@ if __name__ == '__main__':
     print('MODEL ARCHITECTURE FOR TOPO REG AND NONE TOPO REG: ')
     print(model.summary())
 
-    train_experiment(20, topo_reg, loss_object, model, optimizer,
+    train_experiment(30, topo_reg, loss_object, model, optimizer,
                      train_dataset, val_dataset, neuron_space_strategy)
