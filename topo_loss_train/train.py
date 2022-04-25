@@ -48,12 +48,15 @@ def labels_from_predictions(_predictions):
 def train_step_topo(topo_reg, neuron_space_strategy, model, optimizer,
                     loss_object, train_loss, train_full_topo_loss, train_full_none_topo_loss,
                     train_accuracy, inputs, labels, acc, total_occ):
-    X = neuron_space_strategy(model, inputs)  # Inputs all batch, with labels X = inputs
-    X = tf.Variable(X.array, tf.float64)
-
-    print(tf.shape(X))
 
     with tf.GradientTape() as tape:
+        X = neuron_space_strategy(model, inputs)  # Inputs all batch, with labels X = inputs
+        X = tf.Variable(X.array, tf.float64)
+
+        print(X)
+
+        print(tf.shape(X))
+
         Dg = RipsModel(X=X, mel=30, dim=0, card=10).call()
         topo_loss = compute_total_persistence(Dg)
 
@@ -63,7 +66,8 @@ def train_step_topo(topo_reg, neuron_space_strategy, model, optimizer,
 
         loss_topo_reg = (topo_reg * topo_loss) + (1 - topo_reg) * loss
 
-    gradients_topo = tape.gradient(loss_topo_reg, model.trainable_variables)
+    gradients_topo = tape.gradient(topo_loss, model.trainable_variables)
+    print(gradients_topo)
     optimizer.apply_gradients(zip(gradients_topo, model.trainable_variables))
 
     train_loss(loss_topo_reg)
@@ -174,24 +178,24 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
         total_occ_test_topo = [0 for x in range(10)]
         acc_test_topo = [np.nan for x in range(10)]
 
-        num = 0
-
         print(type(inputs_train))
 
+        '''
         train_step(model_none_topo_reg, optimizer, loss_object,
                    train_loss, train_accuracy, inputs_train, labels_train, acc_train, total_occ_train)
+        '''
 
         train_step_topo(topo_reg, neuron_space_strategy, model_topo_reg,
                         optimizer, loss_object, train_loss_topo,
                         train_full_topo_loss, train_full_none_topo_loss, train_accuracy_topo,
                         inputs_train, labels_train, acc_train_topo, total_occ_train_topo)
-        num += 1
-        print(num)
 
         test_step(model_topo_reg, inputs_test, labels_test, loss_object, test_loss_topo, test_accuracy_topo,
                   acc_test_topo, total_occ_test_topo)
+        '''
         test_step(model_none_topo_reg, inputs_test, labels_test, loss_object, test_loss, test_accuracy,
                   acc_test, total_occ_test)
+        '''
 
         template = 'Epoch {}, Perdida: {}, Exactitud: {}, Perdida de prueba: {}, Exactitud de prueba: {}'
         print(template.format(epoch + 1,
@@ -229,8 +233,8 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
 
         print('\n Accuracies per class train: ', acc_train)
         print('\n Accuracies per class test: ', acc_test)
-        print('\n Accuracies per class train: ', acc_train_topo)
-        print('\n Accuracies per class test: ', acc_test_topo)
+        print('\n Accuracies per class train TOPO: ', acc_train_topo)
+        print('\n Accuracies per class test TOPO: ', acc_test_topo)
 
         train_loss.reset_states()
         train_accuracy.reset_states()
