@@ -144,7 +144,6 @@ class RipsModel(tf.keras.Model):
 
         # Compute distance matrix
         if self.distance is None:
-            print(tf.shape(self.X))
             DX = tf.math.sqrt(tf.reduce_sum((tf.expand_dims(self.X, 1) - tf.expand_dims(self.X, 0)) ** 2, 2))
         else:
             DX = self.distance(self.X)

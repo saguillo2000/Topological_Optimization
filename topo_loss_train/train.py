@@ -51,12 +51,6 @@ def train_step_topo(topo_reg, neuron_space_strategy, model, optimizer,
 
     with tf.GradientTape() as tape:
         X = neuron_space_strategy(model, inputs)  # Inputs all batch, with labels X = inputs
-        X = tf.Variable(X.array, tf.float64)
-
-        print(X)
-
-        print(tf.shape(X))
-
         Dg = RipsModel(X=X, mel=30, dim=0, card=10).call()
         topo_loss = compute_total_persistence(Dg)
 
@@ -67,7 +61,6 @@ def train_step_topo(topo_reg, neuron_space_strategy, model, optimizer,
         loss_topo_reg = (topo_reg * topo_loss) + (1 - topo_reg) * loss
 
     gradients_topo = tape.gradient(topo_loss, model.trainable_variables)
-    print(gradients_topo)
     optimizer.apply_gradients(zip(gradients_topo, model.trainable_variables))
 
     train_loss(loss_topo_reg)
@@ -304,9 +297,9 @@ if __name__ == '__main__':
 
     optimizer = tf.keras.optimizers.Adam()
 
-    clustering_strategy = partial(AverageImportanceStrategy.average_importance_clustering, number_of_neurons=3000)
-    neuron_space_strategy = partial(NeuronSpace.get_neuron_activation_space_with_clustering,
-                                    neuron_clustering_strategy=clustering_strategy)
+    # clustering_strategy = partial(AverageImportanceStrategy.average_importance_clustering_tf, number_of_neurons=3000)
+    neuron_space_strategy = partial(NeuronSpace.get_neuron_activation_space_with_clustering_tf,
+                                    neuron_clustering_strategy=None)
 
     print('MODEL ARCHITECTURE FOR TOPO REG AND NONE TOPO REG: ')
     print(model.summary())

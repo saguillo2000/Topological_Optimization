@@ -21,6 +21,12 @@ def get_neuron_activations_x_examples_matrix(x, model, num_skipped_layers_from_s
     return activations_x_examples
 
 
+def get_neuron_activations_x_examples_matrix_tf(x, model, num_skipped_layers_from_start=1):
+    examples_x_activations = _examples_x_activations_for_input_tf(x, model, num_skipped_layers_from_start)
+    activations_x_examples = tf.transpose(examples_x_activations)
+    return activations_x_examples
+
+
 def make_model_by_parameters(filename):
     model = tf.keras.models.load_model(filename)
     return model
@@ -41,4 +47,23 @@ def _examples_x_activations_for_input(x, model, num_skipped_layers_from_start):
                 first_layer = False
             else:
                 activations_bd.concatenate(examples_x_neurons)
+    return activations_bd
+
+
+def _examples_x_activations_for_input_tf(x, model, num_skipped_layers_from_start):
+    first_layer = True
+    skipped_iterations = 0
+    for layer in model.layers:
+        if skipped_iterations < num_skipped_layers_from_start:
+            x = layer(x)
+            skipped_iterations += 1
+        else:
+            x = layer(x)
+            examples_x_neurons = tf.reshape(x, (tf.shape(x).numpy()[0], -1))
+            if first_layer:
+                activations_bd = examples_x_neurons
+                first_layer = False
+            else:
+                activations_bd = tf.keras.layers.Concatenate(axis=1)([activations_bd, examples_x_neurons])
+
     return activations_bd

@@ -20,7 +20,7 @@ def average_importance_clustering(activations_x_examples, number_of_neurons):
 
 def average_importance_clustering_tf(activations_x_examples, number_of_neurons):
     averages = tf.reduce_mean(tf.abs(activations_x_examples), axis=1)
-    neurons_idxs = list(range(activations_x_examples.array.shape[0]))
+    neurons_idxs = list(range(activations_x_examples.numpy().shape[0]))
     sum_of_averages = tf.math.reduce_sum(averages)
     probs = tf.math.divide(averages, sum_of_averages)
 
