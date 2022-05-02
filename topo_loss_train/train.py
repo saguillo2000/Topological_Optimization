@@ -51,8 +51,8 @@ def train_step_topo(topo_reg, neuron_space_strategy, model, optimizer,
 
     with tf.GradientTape() as tape:
         X = neuron_space_strategy(model, inputs)  # Inputs all batch, with labels X = inputs
-        Dg = RipsModel(X=X, mel=30, dim=0, card=10).call()
-        topo_loss = compute_total_persistence(Dg)
+        Dg = RipsModel(X=X, mel=np.inf, dim=0, card=30).call()
+        topo_loss = - compute_total_persistence(Dg)
 
         predictions = _compute_predictions(inputs, model)
 
@@ -263,7 +263,7 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
     serialize('LossesFullNoneTopo', loss_epochs_full_none_topo)
 
 
-def reduce_dataset(train_images, train_labels, reduction=0.1):
+def reduce_dataset(train_images, train_labels, reduction=0.01):
     df = pd.DataFrame(list(zip(train_images, train_labels)), columns=['Image', 'label'])
     val = df.sample(frac=reduction)
     X_train = np.array([i for i in list(val['Image'])])
@@ -289,9 +289,9 @@ if __name__ == '__main__':
     # generate_networks(1, (32, 32, 3), 8, 10, 4000)[0]
     model = tf.keras.models.Sequential([
         tf.keras.layers.Flatten(input_shape=[32, 32, 3]),
-        tf.keras.layers.Dense(100, activation="relu"),
-        tf.keras.layers.Dense(100, activation="relu"),
-        tf.keras.layers.Dense(100, activation="relu"),
+        tf.keras.layers.Dense(500, activation="relu"),
+        #tf.keras.layers.Dense(100, activation="relu"),
+        #tf.keras.layers.Dense(100, activation="relu"),
         tf.keras.layers.Dense(10, activation="softmax")
     ])
 

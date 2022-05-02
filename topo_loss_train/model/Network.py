@@ -64,6 +64,6 @@ def _examples_x_activations_for_input_tf(x, model, num_skipped_layers_from_start
                 activations_bd = examples_x_neurons
                 first_layer = False
             else:
-                activations_bd = tf.keras.layers.Concatenate(axis=1)([activations_bd, examples_x_neurons])
+                activations_bd = tf.concat([activations_bd, examples_x_neurons], axis=1)
 
     return activations_bd

@@ -123,10 +123,17 @@ def Rips(DX, mel, dim, card):
 
     # Sort points with distance-to-diagonal
     perm = np.argsort(pers)
+
+    print(len(pers))
+    print(len(indices))
+    print(indices)
+
     indices = list(np.reshape(indices, [-1, 4])[perm][::-1, :].flatten())
 
     # Output indices
     indices = indices[:4 * card] + [0 for _ in range(0, max(0, 4 * card - len(indices)))]
+    print(indices)
+    print(len(indices))
     return list(np.array(indices, dtype=np.int32))
 
 
