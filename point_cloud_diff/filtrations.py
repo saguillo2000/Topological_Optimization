@@ -21,7 +21,7 @@ def SimplexTree(stbase, fct, dim, card):
     #             dim (homological dimension),
     #             card (number of persistence diagram points, sorted by distance-to-diagonal)
 
-    # Copy stbase in another simplex tree st
+    # Copy base in another simplex tree st
     st = gd.SimplexTree()
     f = open(stbase[0], "r")
     for line in f:
@@ -61,6 +61,7 @@ def SimplexTree(stbase, fct, dim, card):
 
     # Pad vertex pairs
     indices = indices[:2 * card] + [0 for _ in range(0, max(0, 2 * card - len(indices)))]
+
     return list(np.array(indices, dtype=np.int32))
 
 
@@ -124,16 +125,11 @@ def Rips(DX, mel, dim, card):
     # Sort points with distance-to-diagonal
     perm = np.argsort(pers)
 
-    print(len(pers))
-    print(len(indices))
-    print(indices)
-
     indices = list(np.reshape(indices, [-1, 4])[perm][::-1, :].flatten())
 
     # Output indices
     indices = indices[:4 * card] + [0 for _ in range(0, max(0, 4 * card - len(indices)))]
-    print(indices)
-    print(len(indices))
+
     return list(np.array(indices, dtype=np.int32))
 
 

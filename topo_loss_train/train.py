@@ -290,16 +290,14 @@ if __name__ == '__main__':
     model = tf.keras.models.Sequential([
         tf.keras.layers.Flatten(input_shape=[32, 32, 3]),
         tf.keras.layers.Dense(500, activation="relu"),
-        #tf.keras.layers.Dense(100, activation="relu"),
-        #tf.keras.layers.Dense(100, activation="relu"),
+        tf.keras.layers.Dense(100, activation="relu"),
+        tf.keras.layers.Dense(100, activation="relu"),
         tf.keras.layers.Dense(10, activation="softmax")
     ])
 
     optimizer = tf.keras.optimizers.Adam()
 
-    # clustering_strategy = partial(AverageImportanceStrategy.average_importance_clustering_tf, number_of_neurons=3000)
-    neuron_space_strategy = partial(NeuronSpace.get_neuron_activation_space_with_clustering_tf,
-                                    neuron_clustering_strategy=None)
+    neuron_space_strategy = partial(NeuronSpace.get_neuron_activation_space_with_clustering_tf)
 
     print('MODEL ARCHITECTURE FOR TOPO REG AND NONE TOPO REG: ')
     print(model.summary())
