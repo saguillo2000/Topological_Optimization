@@ -30,6 +30,8 @@ def train_step_topo(neuron_space_strategy, model, optimizer,
 
     train_full_topo_loss(topo_loss)
 
+    return Dg
+
 
 @tf.function
 def _compute_predictions(inputs, model):
@@ -44,53 +46,32 @@ def serialize(fileName, content):
 
 def train_experiment(epochs, model, optimizer,
                      train_dataset, neuron_space_strategy):
-    train_loss = tf.keras.metrics.Mean(name='train_loss')
-
     train_full_topo_loss = tf.keras.metrics.Mean(name='train_full_topo_loss')
-    train_full_none_topo_loss = tf.keras.metrics.Mean(name='train_full_none_topo_loss')
-
-    train_loss_topo = tf.keras.metrics.Mean(name='train_loss')
 
     inputs_train, labels_train = train_dataset
-
-    print('Shape of inputs training: ', inputs_train.shape)
-    print('Shape of labels training: ', labels_train.shape)
-
     inputs_train = tf.convert_to_tensor(inputs_train)
 
-    print('Shape of inputs training: ', tf.shape(inputs_train))
-
-    loss_epochs_topo = []
     loss_epochs_full_topo = []
-    loss_epochs_full_none_topo = []
+    Dgms = []
 
     for epoch in range(epochs):
-
-        train_step_topo(neuron_space_strategy, model,
-                        optimizer, train_full_topo_loss, inputs_train)
+        dgm = train_step_topo(neuron_space_strategy, model,
+                              optimizer, train_full_topo_loss, inputs_train)
 
         template = 'TOPO: Epoch {}, Perdida: {}, Perdida Topo: {}, Perdida Sin Topo: {}'
         print(template.format(epoch + 1,
-                              train_loss_topo.result(),
                               train_full_topo_loss.result()))
 
-        loss_epochs_topo.append(train_loss_topo.result())
         loss_epochs_full_topo.append(train_full_topo_loss.result())
-        loss_epochs_full_none_topo.append(train_full_none_topo_loss.result())
-
-        train_loss.reset_states()
         train_full_topo_loss.reset_states()
-        train_full_none_topo_loss.reset_states()
 
-        train_loss_topo.reset_states()
+        Dgms.append(dgm)
 
-    serialize('LossesEpochsTopo', loss_epochs_topo)
     serialize('LossesFullTopo', loss_epochs_full_topo)
-    serialize('LossesFullNoneTopo', loss_epochs_full_none_topo)
+    serialize('PersistenceDiagrams', Dgms)
 
 
 if __name__ == '__main__':
-
     train_mnist, input_size, output_size = dataset_MNIST()
 
     loss_object = losses.SparseCategoricalCrossentropy()
