@@ -14,7 +14,7 @@ def dataset_MNIST(reduction=None):
     train = (train_images, train_labels)
     test = (test_images, test_labels)
 
-    return train, test, INPUT_SIZE, OUTPUT_SIZE
+    return train, INPUT_SIZE, OUTPUT_SIZE
 
 
 def dataset_CIFAR10(reduction=None):
@@ -29,7 +29,7 @@ def dataset_CIFAR10(reduction=None):
     train = (train_images, train_labels)
     test = (test_images, test_labels)
 
-    return train, test, INPUT_SIZE, OUTPUT_SIZE
+    return train, INPUT_SIZE, OUTPUT_SIZE
 
 
 def dataset_CIFAR100(reduction=None):
@@ -44,4 +44,4 @@ def dataset_CIFAR100(reduction=None):
     train = (train_images, train_labels)
     test = (test_images, test_labels)
 
-    return train, test, INPUT_SIZE, OUTPUT_SIZE
+    return train, INPUT_SIZE, OUTPUT_SIZE
