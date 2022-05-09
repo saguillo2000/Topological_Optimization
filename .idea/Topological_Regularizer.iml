@@ -7,8 +7,12 @@
       <sourceFolder url="file://$MODULE_DIR$/ToyNeuralNetworks" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/generator_NN" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/topo_loss_train" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/experiment" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="3.9 @ Ubuntu-20.04" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+  <component name="PyDocumentationSettings">
+    <option name="renderExternalDocumentation" value="true" />
   </component>
 </module>

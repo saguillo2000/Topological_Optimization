@@ -1,5 +1,5 @@
-from tests.models import *
-from tests.datasets import *
+from models import *
+from datasets import *
 from topo_loss_train.train import *
 
 
