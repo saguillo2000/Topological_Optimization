@@ -91,7 +91,7 @@ def train_experiment(epochs, model, optimizer,
 
 if __name__ == '__main__':
 
-    train, input_size, output_size = dataset_MNIST()
+    train_mnist, input_size, output_size = dataset_MNIST()
 
     loss_object = losses.SparseCategoricalCrossentropy()
 
@@ -105,4 +105,4 @@ if __name__ == '__main__':
     print(models.two_hidden.summary())
 
     train_experiment(30, models.two_hidden, optimizer,
-                     train, neuron_space_strategy)
+                     train_mnist, neuron_space_strategy)
