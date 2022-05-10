@@ -34,7 +34,7 @@ def load_models():
 
     for file in os.listdir('models'):
         path = os.path.join('models', file)
-        temp_network = tf.keras.models.load_model(path)
+        temp_network = tf.keras.list_models.load_model(path)
         networks.append(temp_network)
 
 

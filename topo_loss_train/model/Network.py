@@ -28,7 +28,7 @@ def get_neuron_activations_x_examples_matrix_tf(x, model, num_skipped_layers_fro
 
 
 def make_model_by_parameters(filename):
-    model = tf.keras.models.load_model(filename)
+    model = tf.keras.list_models.load_model(filename)
     return model
 
 

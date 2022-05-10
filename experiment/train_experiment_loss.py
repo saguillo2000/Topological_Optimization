@@ -45,7 +45,7 @@ def serialize(fileName, content):
 
 
 def train_experiment(epochs, model, optimizer,
-                     train_dataset, neuron_space_strategy):
+                     train_dataset, neuron_space_strategy, path):
     train_full_topo_loss = tf.keras.metrics.Mean(name='train_full_topo_loss')
 
     inputs_train, labels_train = train_dataset
@@ -67,8 +67,8 @@ def train_experiment(epochs, model, optimizer,
 
         Dgms.append(dgm)
 
-    serialize('LossesFullTopo', loss_epochs_full_topo)
-    serialize('PersistenceDiagrams', Dgms)
+    serialize(path+'LossesFullTopo', loss_epochs_full_topo)
+    serialize(path+'PersistenceDiagrams', Dgms)
 
 
 if __name__ == '__main__':

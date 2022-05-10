@@ -19,7 +19,7 @@ def pick_and_clean_models(train_dataset, validation_dataset, initial_network, mo
         raise Exception("The model folder does not exist")
     models_files = [model_file for model_file in os.listdir(model_path) if model_file.endswith('.h5')]
     models_iterations = [int(model_file[:-3]) for model_file in models_files]
-    models = [tf.keras.models.load_model(os.path.join(model_path, model_file), compile=False)
+    models = [tf.keras.list_models.load_model(os.path.join(model_path, model_file), compile=False)
               for model_file in models_files]
     models_x_iterations = list(zip(models, models_iterations))
     best_model_x_iteration = _pick_best_model(models_x_iterations, train_dataset, validation_dataset, loss_object_model,

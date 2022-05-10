@@ -7,7 +7,7 @@ def path_norm(model: tf.keras.Model, p=2):
         input_shape = (1,)+input_shape[1:]
     ones = tf.ones(input_shape)
 
-    model = tf.keras.models.clone_model(model)
+    model = tf.keras.list_models.clone_model(model)
 
     weights = model.get_weights()
     for layer in model.layers:

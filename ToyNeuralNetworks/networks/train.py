@@ -53,7 +53,7 @@ def train(model, train_dataset, validation_dataset, network_number,
 
     _, optimizer = _select_best_model_and_optimizer(model, train_dataset, validation_dataset, trial_epochs,
                                                     optimizer, loss_metric_model, loss_object_model)
-    model = tf.keras.models.clone_model(model)
+    model = tf.keras.list_models.clone_model(model)
     batches_incrementation_strategy = batches_incrementation_strategy()
     train_loss = loss_metric_model(name='train_loss')
     train_accuracy = accuracy_model(name='train_accuracy')
@@ -194,7 +194,7 @@ def _train_trials(model, train_dataset, validation_dataset, epochs, optimizer, l
 def _select_best_model_and_optimizer(model, train_dataset, validation_dataset, trial_epochs, optimizer,
                                      loss_metric_model, loss_object_model):
     models_x_optimizers = list(
-        map(lambda lr: (tf.keras.models.clone_model(model), optimizer(learning_rate=lr)),
+        map(lambda lr: (tf.keras.list_models.clone_model(model), optimizer(learning_rate=lr)),
             POSSIBLE_LEARNING_RATES))
     val_losses = list(map(lambda model_x_optimizer:
                           _train_trials(model_x_optimizer[0], train_dataset, validation_dataset, trial_epochs,

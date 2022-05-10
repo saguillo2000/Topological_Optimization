@@ -94,14 +94,14 @@ if __name__ == '__main__':
     loss_object_val_none_topo = losses.SparseCategoricalCrossentropy(from_logits=True)
 
     # generate_networks(1, (32, 32, 3), 8, 10, 4000)[0]
-    model_topo_reg = tf.keras.models.Sequential([
+    model_topo_reg = tf.keras.list_models.Sequential([
         tf.keras.layers.Flatten(input_shape=[32, 32, 3]),
         tf.keras.layers.Dense(100, activation="relu"),
         tf.keras.layers.Dense(100, activation="relu"),
         tf.keras.layers.Dense(100, activation="relu"),
         tf.keras.layers.Dense(10, activation="softmax")
     ])
-    model_none_topo_reg = tf.keras.models.Sequential([
+    model_none_topo_reg = tf.keras.list_models.Sequential([
         tf.keras.layers.Flatten(input_shape=[32, 32, 3]),
         tf.keras.layers.Dense(100, activation="relu"),
         tf.keras.layers.Dense(100, activation="relu"),

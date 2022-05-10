@@ -368,7 +368,7 @@ def complexityManifoldMixup(model, dataset, program_dir=None,
 
 	def veracityRatio(model, batches, label, layer=0, version_loss=False):
 
-		cloned_model = keras.models.clone_model(model, input_tensors=keras.Input(shape=(batches[0][0][0].shape)))
+		cloned_model = keras.list_models.clone_model(model, input_tensors=keras.Input(shape=(batches[0][0][0].shape)))
 		cloned_model.set_weights(model.get_weights())
 		if layer != 0:
 			cloned_model.layers[layer-1].activation = keras.activations.linear

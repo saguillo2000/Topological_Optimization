@@ -287,7 +287,7 @@ if __name__ == '__main__':
     loss_object = losses.SparseCategoricalCrossentropy()
 
     # generate_networks(1, (32, 32, 3), 8, 10, 4000)[0]
-    model = tf.keras.models.Sequential([
+    model = tf.keras.list_models.Sequential([
         tf.keras.layers.Flatten(input_shape=[32, 32, 3]),
         tf.keras.layers.Dense(500, activation="relu"),
         tf.keras.layers.Dense(100, activation="relu"),
