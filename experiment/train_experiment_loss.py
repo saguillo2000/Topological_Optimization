@@ -55,10 +55,11 @@ def train_experiment(epochs, model, optimizer,
     Dgms = []
 
     for epoch in range(epochs):
+        print('EPOCH NUM:------------', epoch, '-----------')
         dgm = train_step_topo(neuron_space_strategy, model,
                               optimizer, train_full_topo_loss, inputs_train)
 
-        template = 'TOPO: Epoch {}, Perdida: {}, Perdida Topo: {}, Perdida Sin Topo: {}'
+        template = 'TOPO: Epoch {}, Perdida: {}'
         print(template.format(epoch + 1,
                               train_full_topo_loss.result()))
 
@@ -67,8 +68,9 @@ def train_experiment(epochs, model, optimizer,
 
         Dgms.append(dgm)
 
-    serialize(path+'LossesFullTopo', loss_epochs_full_topo)
-    serialize(path+'PersistenceDiagrams', Dgms)
+    # TODO make the path correcto to get inside
+    serialize(path + 'LossesFullTopo', loss_epochs_full_topo)
+    serialize(path + 'PersistenceDiagrams', Dgms)
 
 
 if __name__ == '__main__':
