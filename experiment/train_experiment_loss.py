@@ -1,9 +1,7 @@
 from functools import partial
 
-import tensorflow as tf
 import numpy as np
 
-from point_cloud_diff.diff import compute_total_persistence
 from filtrations import RipsModel
 from model import NeuronSpace
 from tensorflow.keras import losses
@@ -19,11 +17,11 @@ warnings.filterwarnings("ignore")
 
 
 def train_step_topo(neuron_space_strategy, model, optimizer,
-                    train_full_topo_loss, inputs):
+                    train_full_topo_loss, topo_descriptor, inputs):
     with tf.GradientTape() as tape:
         X = neuron_space_strategy(model, inputs)  # Inputs all batch, with labels X = inputs
         Dg = RipsModel(X=X, mel=np.inf, dim=0, card=30).call()
-        topo_loss = - compute_total_persistence(Dg)
+        topo_loss = - topo_descriptor(Dg)
 
     gradients_topo = tape.gradient(topo_loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradients_topo, model.trainable_variables))
@@ -44,7 +42,7 @@ def serialize(fileName, content):
     outputFile.close()
 
 
-def train_experiment(epochs, model, optimizer,
+def train_experiment(epochs, model, optimizer, topo_descriptor,
                      train_dataset, neuron_space_strategy, path):
     train_full_topo_loss = tf.keras.metrics.Mean(name='train_full_topo_loss')
 
@@ -57,7 +55,8 @@ def train_experiment(epochs, model, optimizer,
     for epoch in range(epochs):
         print('EPOCH NUM:------------', epoch, '-----------')
         dgm = train_step_topo(neuron_space_strategy, model,
-                              optimizer, train_full_topo_loss, inputs_train)
+                              optimizer, train_full_topo_loss,
+                              topo_descriptor,inputs_train)
 
         template = 'TOPO: Epoch {}, Perdida: {}'
         print(template.format(epoch + 1,
@@ -69,8 +68,8 @@ def train_experiment(epochs, model, optimizer,
         Dgms.append(dgm)
 
     # TODO make the path correcto to get inside
-    serialize(path + 'LossesFullTopo', loss_epochs_full_topo)
-    serialize(path + 'PersistenceDiagrams', Dgms)
+    serialize(path + '/LossesFullTopo', loss_epochs_full_topo)
+    serialize(path + '/PersistenceDiagrams', Dgms)
 
 
 if __name__ == '__main__':
@@ -88,4 +87,4 @@ if __name__ == '__main__':
     print(models.two_hidden.summary())
 
     train_experiment(30, models.two_hidden, optimizer,
-                     train_mnist, neuron_space_strategy)
+                     train_mnist, compute_total_persistence, neuron_space_strategy)

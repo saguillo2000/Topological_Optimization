@@ -264,6 +264,7 @@ def train_experiment(epochs, topo_reg, loss_object, model, optimizer,
 
 
 def reduce_dataset(train_images, train_labels, reduction=0.01):
+
     df = pd.DataFrame(list(zip(train_images, train_labels)), columns=['Image', 'label'])
     val = df.sample(frac=reduction)
     X_train = np.array([i for i in list(val['Image'])])

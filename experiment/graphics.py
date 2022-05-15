@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
+import seaborn as sns
 import pickle
 import numpy as np
+from sklearn.neighbors import KernelDensity
 
 
 def open_pickle(path):
@@ -35,10 +37,28 @@ def plot_persistence_diagram(dgm, num_diagram):
     plt.savefig('CIFAR10/2_hidden/{num}.pdf'.format(num=num_diagram))
 
 
+def plt_density(dgm):
+    np_dgm = dgm.numpy()
+
+    x, y = np.split(np_dgm, 2, axis=1)
+
+    x = x.flatten()
+    y = y.flatten()
+
+    f, ax = plt.subplots(figsize=(6, 6))
+
+    sns.kdeplot(x, y, cmap="Blues", shade=True, shade_lowest=False)
+
+
 if __name__ == '__main__':
     dgms = open_pickle('CIFAR10/2_hidden/2_hiddenPersistenceDiagrams.pkl')
 
     num_diagram = 1
+
+    dgm = dgms[0]
+
+    plt_density(dgm)
+
     for dgm in dgms:
         plot_persistence_diagram(dgm, num_diagram)
         num_diagram += 1
