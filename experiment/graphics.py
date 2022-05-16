@@ -51,13 +51,9 @@ def plt_density(dgm):
 
 
 if __name__ == '__main__':
-    dgms = open_pickle('CIFAR10/2_hidden/2_hiddenPersistenceDiagrams.pkl')
+    dgms = open_pickle('CIFAR10/2_hidden/PersistenceDiagrams.pkl')
 
     num_diagram = 1
-
-    dgm = dgms[0]
-
-    plt_density(dgm)
 
     for dgm in dgms:
         plot_persistence_diagram(dgm, num_diagram)
