@@ -1,8 +1,10 @@
+import os
+
 import matplotlib.pyplot as plt
-import seaborn as sns
 import pickle
 import numpy as np
 from sklearn.neighbors import KernelDensity
+from scipy.stats import norm
 
 
 def open_pickle(path):
@@ -10,7 +12,14 @@ def open_pickle(path):
         return pickle.load(f)
 
 
-def plot_persistence_diagram(dgm, num_diagram):
+def create_path(dir_path):
+    try:
+        os.makedirs(dir_path)
+    except FileExistsError:
+        pass
+
+
+def plot_persistence_diagram(dgm, num_diagram, path):
     np_dgm = dgm.numpy()
     x, y = np.split(np_dgm, 2, axis=1)
 
@@ -34,10 +43,10 @@ def plot_persistence_diagram(dgm, num_diagram):
 
     ax.set_title('Persistence Diagram')
 
-    plt.savefig('CIFAR10/2_hidden/{num}.pdf'.format(num=num_diagram))
+    plt.savefig(path + '/PD_{num}.pdf'.format(num=num_diagram))
 
 
-def plt_density(dgm):
+def plt_density(dgm, num_diagram, path):
     np_dgm = dgm.numpy()
 
     x, y = np.split(np_dgm, 2, axis=1)
@@ -45,16 +54,38 @@ def plt_density(dgm):
     x = x.flatten()
     y = y.flatten()
 
-    f, ax = plt.subplots(figsize=(6, 6))
+    true_dens = 0.3 * norm(0, 1).pdf(y) + 0.7 * norm(5, 1).pdf(y)
 
-    sns.kdeplot(x, y, cmap="Blues", shade=True, shade_lowest=False)
+    fig, ax = plt.subplots()
+    ax.fill(y, true_dens, fc="blue", alpha=0.2, label="input distribution")
+
+    ax.legend(loc="upper left")
+    ax.plot(y, -0.005 - 0.01 * np.random.random(y.shape[0]), "+k")
+
+    ax.set_xlim(min(y) - 1, max(y) + 1)
+    ax.set_ylim(-0.02, 0.4)
+
+    ax.set_title('Density Function')
+
+    plt.savefig(path + '/DF_{num}.pdf'.format(num=num_diagram))
 
 
 if __name__ == '__main__':
-    dgms = open_pickle('CIFAR10/2_hidden/PersistenceDiagrams.pkl')
 
-    num_diagram = 1
+    datasets = ['CIFAR10', 'CIFAR100', 'MNSIT']
+    models_res = ['10_hidden', '2_hidden', '3_hidden', '5_hidden']
 
-    for dgm in dgms:
-        plot_persistence_diagram(dgm, num_diagram)
-        num_diagram += 1
+    for dataset in datasets:
+
+        for model in models_res:
+            path = dataset + '/' + model
+            print(path)
+            diagrams = open_pickle(path + '/PersistenceDiagrams.pkl')
+            create_path(path + '/PD_pdfs')
+            create_path(path + '/DF_pdfs')
+
+            num_diagram = 1
+            for diagram in diagrams:
+                plot_persistence_diagram(diagram, num_diagram, path + '/PD_pdfs')
+                plt_density(diagram, num_diagram, path + '/DF_pdfs')
+                num_diagram += 1
