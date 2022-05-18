@@ -52,26 +52,36 @@ def plt_density(dgm, num_diagram, path):
     x, y = np.split(np_dgm, 2, axis=1)
 
     x = x.flatten()
-    y = y.flatten()
+    y = y.flatten().reshape(-1, 1)
 
-    true_dens = 0.3 * norm(0, 1).pdf(y) + 0.7 * norm(5, 1).pdf(y)
+    y_plot = np.linspace(min(y) -3 , max(y) + 3)
 
     fig, ax = plt.subplots()
-    ax.fill(y, true_dens, fc="blue", alpha=0.2, label="input distribution")
 
-    ax.legend(loc="upper left")
+    kde = KernelDensity(kernel="gaussian", bandwidth=0.5).fit(y)
+    log_dens = kde.score_samples(y_plot.reshape((-1, 1)))
+    ax.plot(
+        y_plot,
+        np.exp(log_dens),
+        color="navy",
+        lw=2,
+        linestyle="-",
+        label="Gaussian Kernel "
+    )
+
+    ax.legend(loc="upper right")
     ax.plot(y, -0.005 - 0.01 * np.random.random(y.shape[0]), "+k")
 
-    ax.set_xlim(min(y) - 1, max(y) + 1)
-    ax.set_ylim(-0.02, 0.4)
+    # ax.set_xlim(min(y) - 1, max(y) + 1)
+    # ax.set_ylim(-0.02, 0.7)
 
     ax.set_title('Density Function')
 
+    # plt.show()
     plt.savefig(path + '/DF_{num}.pdf'.format(num=num_diagram))
 
 
-if __name__ == '__main__':
-
+def get_all_graphics():
     datasets = ['CIFAR10', 'CIFAR100', 'MNSIT']
     models_res = ['10_hidden', '2_hidden', '3_hidden', '5_hidden']
 
@@ -89,3 +99,12 @@ if __name__ == '__main__':
                 plot_persistence_diagram(diagram, num_diagram, path + '/PD_pdfs')
                 plt_density(diagram, num_diagram, path + '/DF_pdfs')
                 num_diagram += 1
+
+
+if __name__ == '__main__':
+    """
+    dgms = open_pickle('CIFAR10/2_hidden/PersistenceDiagrams.pkl')
+    plt_density(dgms[0], 0, None)
+    """
+
+    get_all_graphics()
