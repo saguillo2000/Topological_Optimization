@@ -2,6 +2,7 @@ from functools import partial
 
 import numpy as np
 
+from diff import compute_total_persistence
 from filtrations import RipsModel
 from model import NeuronSpace
 from tensorflow.keras import losses
