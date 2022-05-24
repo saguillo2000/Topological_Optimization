@@ -43,8 +43,8 @@ def plot_persistence_diagram(dgm, num_diagram, path=None):
 
     ax.set_title(f'Persistence Diagram {num_diagram}')
 
-    plt.show()
-    # plt.savefig(path + f'/PD_{num_diagram}.pdf')
+    # plt.show()
+    plt.savefig(path + f'/PD_{num_diagram}.pdf')
 
 
 def plt_density(dgm, num_diagram, path):
@@ -73,13 +73,10 @@ def plt_density(dgm, num_diagram, path):
     ax.legend(loc="upper right")
     ax.plot(y, -0.005 - 0.01 * np.random.random(y.shape[0]), "+k")
 
-    # ax.set_xlim(min(y) - 1, max(y) + 1)
-    # ax.set_ylim(-0.02, 0.7)
-
     ax.set_title('Density Function')
 
     # plt.show()
-    plt.savefig(path + '/DF_{num}.pdf'.format(num=num_diagram))
+    plt.savefig(path + f'/DF_{num_diagram}.pdf')
 
 
 def get_all_graphics():

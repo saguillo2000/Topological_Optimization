@@ -68,7 +68,6 @@ def train_experiment(epochs, model, optimizer, topo_descriptor,
         train_full_topo_loss.reset_states()
 
         Dgms.append(dgm)
-        plot_persistence_diagram(dgm, epoch)
 
     # TODO make the path correcto to get inside
     serialize(path + '/LossesFullTopo', loss_epochs_full_topo)
@@ -89,6 +88,6 @@ if __name__ == '__main__':
     print('MODEL ARCHITECTURE FOR TOPO REG AND NONE TOPO REG: ')
     print(models.two_hidden.summary())
 
-    train_experiment(20, models.two_hidden, optimizer,
+    train_experiment(5, models.two_hidden, optimizer,
                      compute_group_persistence, train_mnist,
                      neuron_space_strategy, '')
