@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 from graphics import open_pickle
 
@@ -13,10 +14,12 @@ def compute_total_persistence(dgm):
 
 
 def compute_group_persistence(dgm):
-    return tf.math.multiply(
-        tf.math.reduce_sum(tf.math.subtract(dgm[:, 1], dgm[:, 0])),
-        tf.math.reciprocal(tf.math.subtract(tf.reduce_max(dgm[:, 1]),
-                                            tf.reduce_min(dgm[:, 1]))))
+    print(tf.norm(tf.math.subtract(dgm[:, 1], dgm[:, 0]) - tf.math.reduce_mean(dgm),
+                  ord='euclidean'))
+    return tf.math.reduce_sum(
+        tf.math.divide(compute_total_persistence(dgm),
+                       tf.norm(tf.math.subtract(dgm[:, 1], dgm[:, 0]) - tf.math.reduce_mean(dgm),
+                                   ord='euclidean')))
 
 
 if __name__ == '__main__':

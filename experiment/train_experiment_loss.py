@@ -2,11 +2,12 @@ from functools import partial
 
 import numpy as np
 
-from diff import compute_total_persistence
+from topological_descriptors import *
 from filtrations import RipsModel
 from model import NeuronSpace
 from tensorflow.keras import losses
 
+from graphics import plot_persistence_diagram
 from experiment.datasets import *
 from experiment.models import Models
 
@@ -57,7 +58,7 @@ def train_experiment(epochs, model, optimizer, topo_descriptor,
         print('EPOCH NUM:------------', epoch, '-----------')
         dgm = train_step_topo(neuron_space_strategy, model,
                               optimizer, train_full_topo_loss,
-                              topo_descriptor,inputs_train)
+                              topo_descriptor, inputs_train)
 
         template = 'TOPO: Epoch {}, Perdida: {}'
         print(template.format(epoch + 1,
@@ -67,6 +68,7 @@ def train_experiment(epochs, model, optimizer, topo_descriptor,
         train_full_topo_loss.reset_states()
 
         Dgms.append(dgm)
+        plot_persistence_diagram(dgm, epoch)
 
     # TODO make the path correcto to get inside
     serialize(path + '/LossesFullTopo', loss_epochs_full_topo)
@@ -74,7 +76,7 @@ def train_experiment(epochs, model, optimizer, topo_descriptor,
 
 
 if __name__ == '__main__':
-    train_mnist, input_size, output_size = dataset_MNIST()
+    train_mnist, input_size, output_size = dataset_CIFAR10(reduction=0.01)
 
     loss_object = losses.SparseCategoricalCrossentropy()
 
@@ -87,5 +89,6 @@ if __name__ == '__main__':
     print('MODEL ARCHITECTURE FOR TOPO REG AND NONE TOPO REG: ')
     print(models.two_hidden.summary())
 
-    train_experiment(30, models.two_hidden, optimizer,
-                     train_mnist, compute_total_persistence, neuron_space_strategy)
+    train_experiment(20, models.two_hidden, optimizer,
+                     compute_group_persistence, train_mnist,
+                     neuron_space_strategy, '')

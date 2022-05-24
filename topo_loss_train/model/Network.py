@@ -59,7 +59,8 @@ def _examples_x_activations_for_input_tf(x, model, num_skipped_layers_from_start
             skipped_iterations += 1
         else:
             x = layer(x)
-            examples_x_neurons = tf.reshape(x, (tf.shape(x).numpy()[0], -1))
+            # examples_x_neurons = tf.reshape(x, (tf.shape(x).numpy()[0], -1))
+            examples_x_neurons = x
             if first_layer:
                 activations_bd = examples_x_neurons
                 first_layer = False

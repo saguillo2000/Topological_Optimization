@@ -19,7 +19,7 @@ def create_path(dir_path):
         pass
 
 
-def plot_persistence_diagram(dgm, num_diagram, path):
+def plot_persistence_diagram(dgm, num_diagram, path=None):
     np_dgm = dgm.numpy()
     x, y = np.split(np_dgm, 2, axis=1)
 
@@ -41,9 +41,10 @@ def plot_persistence_diagram(dgm, num_diagram, path):
     ax.callbacks.connect('xlim_changed', on_change)
     ax.callbacks.connect('ylim_changed', on_change)
 
-    ax.set_title('Persistence Diagram')
+    ax.set_title(f'Persistence Diagram {num_diagram}')
 
-    plt.savefig(path + '/PD_{num}.pdf'.format(num=num_diagram))
+    plt.show()
+    # plt.savefig(path + f'/PD_{num_diagram}.pdf')
 
 
 def plt_density(dgm, num_diagram, path):

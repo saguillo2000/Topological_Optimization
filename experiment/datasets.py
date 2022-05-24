@@ -3,7 +3,7 @@ from tensorflow.keras import datasets
 from topo_loss_train.train import reduce_dataset
 
 
-def dataset_MNIST(reduction=None):
+def dataset_MNIST(reduction=0.01):
     INPUT_SIZE = (28, 28)
     OUTPUT_SIZE = 10
 
