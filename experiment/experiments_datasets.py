@@ -25,12 +25,12 @@ def train_dataset(train, input_shape, output_shape, dataset_name):
 
     for topo_descriptor, folder_name in topo_descriptors:
         models = Models(input_shape, output_shape)
-        path = os.path.join(dataset_name, folder_name)
+        path_desc = os.path.join(dataset_name, folder_name)
         create_path(folder_name)
 
         for model in models.list_models():
             print('HELLO')
-            path = os.path.join(path, model.name)
+            path = os.path.join(path_desc, model.name)
             print(path)
             create_path(path)
             training(model, train, topo_descriptor, path)
