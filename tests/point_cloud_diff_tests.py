@@ -55,7 +55,6 @@ def diff_point_cloud_test(point_cloud, num_epochs, lr, dim, distance: Callable[[
     for epoch in range(num_epochs + 1):
         Dg, gradients, loss = diff_point_cloud(point_cloud, dim, distance)
         print(Dg.numpy())
-        gd.plot_persistence_diagram(np.array(Dg.numpy()))
 
         Dgs.append(Dg.numpy())
         Xs.append(point_cloud.numpy())
