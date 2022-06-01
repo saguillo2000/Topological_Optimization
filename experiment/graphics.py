@@ -26,7 +26,7 @@ def plot_persistence_diagram(dgm, num_diagram, path=None):
     x = x.flatten()
     y = y.flatten()
 
-    f, ax = plt.subplots(figsize=(6, 6))
+    fig, ax = plt.subplots(figsize=(6, 6))
 
     ax.scatter(x, y)
     ax.set(xlim=(-0.01, 1), ylim=(min(y) - 0.01, max(y) + 0.01))
@@ -43,11 +43,11 @@ def plot_persistence_diagram(dgm, num_diagram, path=None):
 
     ax.set_title(f'Persistence Diagram {num_diagram}')
 
-    # plt.show()
-    plt.savefig(path + f'/PD_{num_diagram}.pdf')
+    # fig.show()
+    fig.savefig(path + f'/PD_{num_diagram}.pdf')
 
 
-def plt_density(dgm, num_diagram, path):
+def plt_density(dgm, num_diagram, path=None):
     np_dgm = dgm.numpy()
 
     x, y = np.split(np_dgm, 2, axis=1)
@@ -55,7 +55,7 @@ def plt_density(dgm, num_diagram, path):
     x = x.flatten()
     y = y.flatten().reshape(-1, 1)
 
-    y_plot = np.linspace(min(y) -3 , max(y) + 3)
+    y_plot = np.linspace(min(y) - 3, max(y) + 3)
 
     fig, ax = plt.subplots()
 
@@ -70,39 +70,57 @@ def plt_density(dgm, num_diagram, path):
         label="Gaussian Kernel "
     )
 
+    ax.fill(y_plot, np.exp(log_dens), alpha=0.2, fc='blue')
+
     ax.legend(loc="upper right")
     ax.plot(y, -0.005 - 0.01 * np.random.random(y.shape[0]), "+k")
 
     ax.set_title('Density Function')
 
-    # plt.show()
-    plt.savefig(path + f'/DF_{num_diagram}.pdf')
+    # fig.show()
+    fig.savefig(path + f'/DF_{num_diagram}.pdf')
+
+
+def plot_loss(y, title, path):
+    fig, ax = plt.subplots()
+
+    plot_range = [x for x in range(30)]
+    ax.plot(plot_range, y)
+    ax.legend(prop={'size': 8})
+    ax.set_title(title)
+    # fig.show()
+    fig.savefig(path + 'TopoLoss.pdf')
 
 
 def get_all_graphics():
-    datasets = ['CIFAR10', 'CIFAR100', 'MNSIT']
+    datasets = ['CIFAR10', 'CIFAR100', 'MNIST']
+    topo_descriptors = ['group_persistence', 'total_persistence']
     models_res = ['10_hidden', '2_hidden', '3_hidden', '5_hidden']
 
     for dataset in datasets:
+        for topo_descriptor in topo_descriptors:
+            for model in models_res:
+                path = dataset + '/' + topo_descriptor + '/' + model
+                print(path)
+                diagrams = open_pickle(path + '/PersistenceDiagrams.pkl')
+                create_path(path + '/PD_pdfs')
+                create_path(path + '/DF_pdfs')
 
-        for model in models_res:
-            path = dataset + '/' + model
-            print(path)
-            diagrams = open_pickle(path + '/PersistenceDiagrams.pkl')
-            create_path(path + '/PD_pdfs')
-            create_path(path + '/DF_pdfs')
-
-            num_diagram = 1
-            for diagram in diagrams:
-                plot_persistence_diagram(diagram, num_diagram, path + '/PD_pdfs')
-                plt_density(diagram, num_diagram, path + '/DF_pdfs')
-                num_diagram += 1
+                num_diagram = 1
+                for diagram in diagrams:
+                    plot_persistence_diagram(diagram, num_diagram, path + '/PD_pdfs')
+                    plt_density(diagram, num_diagram, path + '/DF_pdfs')
+                    num_diagram += 1
+                loss = open_pickle(path + '/LossesFullTopo.pkl')
+                plot_loss(loss, f'Topological Loss {model}, {topo_descriptor}, {dataset}', path)
 
 
 if __name__ == '__main__':
-    """
-    dgms = open_pickle('CIFAR10/2_hidden/PersistenceDiagrams.pkl')
-    plt_density(dgms[0], 0, None)
-    """
+
+    # dgms = open_pickle('CIFAR10/group_persistence/2_hidden/PersistenceDiagrams.pkl')
+    # plt_density(dgms[0], 0)
+
+    # loss = open_pickle('CIFAR10/group_persistence/2_hidden/LossesFullTopo.pkl')
+    # plot_loss(loss, '', '')
 
     get_all_graphics()

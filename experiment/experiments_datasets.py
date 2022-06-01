@@ -19,8 +19,8 @@ def training(model, train, topo_descriptor, path):
 
 
 def train_dataset(train, input_shape, output_shape, dataset_name):
-    topo_descriptors = [(compute_total_persistence, 'total_persistence'),
-                        (compute_group_persistence, 'group_persistence')]
+    topo_descriptors = [(compute_group_persistence, 'group_persistence'),
+                        (compute_total_persistence, 'total_persistence')]
     create_path(dataset_name)
 
     for topo_descriptor, folder_name in topo_descriptors:
@@ -35,7 +35,7 @@ def train_dataset(train, input_shape, output_shape, dataset_name):
             create_path(path)
             training(model, train, topo_descriptor, path)
 
-        serialize(dataset_name + '/Models', models)
+        serialize(path_desc + '/Models', models)
 
 
 if __name__ == '__main__':
@@ -48,4 +48,4 @@ if __name__ == '__main__':
 
     train_dataset(train_10, INPUT_SIZE_10, OUTPUT_SIZE_10, 'CIFAR10')
     train_dataset(train_100, INPUT_SIZE_100, OUTPUT_SIZE_100, 'CIFAR100')
-    train_dataset(train_MNIST, INPUT_SIZE_MNIST, OUTPUT_SIZE_MNIST, 'MNSIT')
+    train_dataset(train_MNIST, INPUT_SIZE_MNIST, OUTPUT_SIZE_MNIST, 'MNIST')

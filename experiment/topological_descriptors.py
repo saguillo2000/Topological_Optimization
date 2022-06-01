@@ -14,12 +14,11 @@ def compute_total_persistence(dgm):
 
 
 def compute_group_persistence(dgm):
-    print(tf.norm(tf.math.subtract(dgm[:, 1], dgm[:, 0]) - tf.math.reduce_mean(dgm),
-                  ord='euclidean'))
+    print(tf.norm(tf.math.subtract(dgm[:, 1], dgm[:, 0]) - tf.math.reduce_mean(dgm)))
     return tf.math.reduce_sum(
         tf.math.divide(compute_total_persistence(dgm),
-                       tf.norm(tf.math.subtract(dgm[:, 1], dgm[:, 0]) - tf.math.reduce_mean(dgm),
-                                   ord='euclidean')))
+                       tf.math.add(tf.norm(tf.math.subtract(dgm[:, 1], dgm[:, 0]) - tf.math.reduce_mean(dgm),
+                                   ord='euclidean'), tf.constant([1], dtype=tf.float32))))
 
 
 if __name__ == '__main__':
